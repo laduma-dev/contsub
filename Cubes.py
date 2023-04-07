@@ -113,6 +113,7 @@ class WCube():
                 order = np.transpose(np.arange(nxny[0]*nxny[1]).reshape(nxny[0],-1)).flatten()
                 log.info(f'order = {order}')
             
+            log.info(f'number of fits files: {len(plist)}')
             objlist = [RCube(plist[o]) for o in order]
 
             [obj.openR(memmap = True) for obj in objlist]
@@ -583,10 +584,11 @@ class RCube():
             log.info('cube has less than 3 dimensions')
             
         else:
-            self.s_o[-3] = slice(i,f)
-            return self._cube[0].data[tuple(self.s_o)]
+            select = self.s_o.copy()
+            select[-3] = slice(i,f)
+            return self._cube[0].data[tuple(select)]
         
-    def getChansXY(self, cl, xl, yl):
+    def getChansXY(self, cl, yl, xl):
         try:
             if not self._open:
                 raise alreadyClosed()
@@ -599,20 +601,23 @@ class RCube():
             log.info('cube has less than 3 dimensions')
             
         else:
-            self.s_o[-3] = slice(cl[0], cl[1], 1)
-            self.s_o[-2] = slice(yl[0], yl[1], 1)
-            self.s_o[-1] = slice(xl[0], xl[1], 1)
-            return self._cube[0].data[tuple(self.s_o)]
+            select = self.s_o.copy()
+            select[-3] = slice(cl[0], cl[1], 1)
+            select[-2] = slice(yl[0], yl[1], 1)
+            select[-1] = slice(xl[0], xl[1], 1)
+            return self._cube[0].data[tuple(select)]
             
     def _getChan(self, i):
-        self.s_o[-3] = i
-        return self._cube[0].data[tuple(self.s_o)]
+        select = self.s_o.copy()
+        select[-3] = i
+        return self._cube[0].data[tuple(select)]
         
     def _getChanXY(self, i, y, x):
-        self.s_o[-3] = i
-        self.s_o[-2] = slice(y[0], y[1], 1)
-        self.s_o[-1] = slice(x[0], x[1], 1)
-        return self._cube[0].data[tuple(self.s_o)]
+        select = self.s_o.copy()
+        select[-3] = i
+        select[-2] = slice(y[0], y[1], 1)
+        select[-1] = slice(x[0], x[1], 1)
+        return self._cube[0].data[tuple(select)]
             
     def getBeamTable(self, lims = None):
         try:
@@ -715,6 +720,7 @@ class RCube():
             whether or not replace the file if it exists
             
         '''
+        log.info(f'file {ptname} has lims: {xlims}, {ylims}, {chlims}')
         cl, yl, xl = self._split_3ax(xlims=xlims, ylims=ylims, chlims=chlims)
         hdrObj = FitsHeader(self.getHeader())
         imheader = hdrObj.spatialSplitHeader(xl, yl, cl)
@@ -753,6 +759,8 @@ class RCube():
             rcube.openR(update = True, mode = 'append')
             rcube.appendBeamTable(fits.BinTableHDU(qt, tbheader))
             rcube.close()
+            
+        time.sleep(1)
             
     def write_like(self, data, folder = None, name = '', overwrite = False):
         base = self.path.replace('.fits', f'_{name}.fits')
@@ -899,6 +907,7 @@ class RCube():
             crng, yrng, xrng = ranges
             _, cpus = RCube._getHWinfo()
             args = self._prepareArgs(xrng, yrng, crng, folder = folder, indiv = indiv)
+            # log.info(f'files have lims: {np.hstack((crng, yrng, xrng))}')
             pool = Pool(cpus)
             pool.starmap(RCube.write_3dChunk, zip(repeat(self), *args, repeat(overwrite)))
             pool.close()
