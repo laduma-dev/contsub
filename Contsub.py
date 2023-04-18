@@ -3,19 +3,17 @@ import pandas as pd
 import datetime
 import os
 from astropy.io import fits
-# from astropy.table import QTable
 import multiprocessing
 from multiprocessing.pool import ThreadPool as Pool
-# from astropy.wcs import WCS
-# import astropy.units as u
 from itertools import repeat
 from scipy import optimize,stats
 from scipy.interpolate import splev, splrep
-import click
+from scipy.signal import convolve
+from scipy import ndimage
 import sys
 import logging
 from abc import ABC, abstractmethod
-# from Cubes import RCube
+
 
 # create logger
 log = logging.getLogger('Contsub')
@@ -67,18 +65,18 @@ class FitFunc(ABC):
     def fit(self, x, data, mask, weight):
         pass
     
-# np.random.seed(1)
-    
 class FitBSpline(FitFunc):
     """
     BSpline fitting function based on `splev`, `splrep` in `scipy.interpolate` 
     """
-    def __init__(self, order, velWidth):
+    def __init__(self, order, velWidth, randomState, seq):
         """
         needs to know the order of the spline and the number of knots
         """
         self._order = order
         self._velwid = velWidth
+        rs = np.random.SeedSequence(entropy = randomState, spawn_key = (seq,))
+        self.rng = np.random.default_rng(rs)
         
     def prepare(self, x, data = None, mask = None, weight = None):
         msort = np.argpartition(x, -2)
@@ -95,8 +93,8 @@ class FitBSpline(FitFunc):
             sys.exit(1)
             
         knotind = np.linspace(0, len(x), self._imax, dtype = int)[1:-1]
-        chwid = (len(x)//self._imax)//6
-        self._knots = lambda: np.random.randint(-chwid, chwid, size = knotind.shape)+knotind
+        chwid = (len(x)//self._imax)//8
+        self._knots = lambda: self.rng.integers(-chwid, chwid, size = knotind.shape)+knotind
     
     def fit(self, x, data, mask, weight):
         """
@@ -104,12 +102,12 @@ class FitBSpline(FitFunc):
         
         x : x values for the fit
         y : values to be fit by spline
-        mask : a mask (not implemented really)
-        weight : weights for fitting the Spline
+        mask : a mask
+        weight : weights for fitting the Spline (not implemented), using mask as weight
         """
         inds = self._knots()
         # log.info(f'inds: {inds}')
-        splCfs = splrep(x, data, task = -1, w = weight, t = x[inds], k = self._order)
+        splCfs = splrep(x, data, task = -1, w = mask, t = x[inds], k = self._order)
         spl = splev(x, splCfs)
         return spl, data-spl
 
@@ -149,11 +147,14 @@ class fitMedFilter(FitFunc):
         mask : a mask (not implemented really)
         weight : weights
         """
+        cp_data = np.copy(data)
+        if not (mask is None):
+            data[np.logical_not(mask)] = np.nan
         nandata = np.hstack((np.full(self._imax//2, np.nan), data, np.full(self._imax//2, np.nan)))
         nanMed = np.nanmedian(np.lib.stride_tricks.sliding_window_view(nandata,self._imax), axis = 1)
         # resMed = nanMed[~np.isnan(nanMed)]
         resMed = nanMed
-        return resMed, data-resMed
+        return resMed, cp_data-resMed
 
 
 class ContSub():
@@ -169,7 +170,10 @@ class ContSub():
         """
         self.cube = cube
         self.function = function
-        self.mask = mask
+        if mask is None:
+            self.mask = None
+        else:
+            self.mask = np.array(mask, dtype = bool)
         self.x = x
         
     def fitContinuum(self):
@@ -180,6 +184,7 @@ class ContSub():
         cont = np.zeros(self.cube.shape)
         line = np.zeros(self.cube.shape)
         self.function.prepare(self.x)
+            
         if self.mask is None:
             for i in range(dimx):
                 for j in range(dimy):
@@ -187,7 +192,7 @@ class ContSub():
         else:
             for i in range(dimx):
                 for j in range(dimy):
-                    cont[:,j,i], line[:,j,i] = self.function.fit(self.x, self.cube[:,j,i], mask = None, weight = self.mask[:,j,i])
+                    cont[:,j,i], line[:,j,i] = self.function.fit(self.x, self.cube[:,j,i], mask = self.mask[:,j,i], weight = None)
                 
             # log.info(f'row {i} is done')
             
@@ -226,7 +231,7 @@ class pixSigmaClip(ClipMethod):
     """
     simple sigma clipping class
     """
-    def __init__(self, n, method = 'rms'):
+    def __init__(self, n, sm_kernel = None, dilation = 0, method = 'rms'):
         """
         has to define the multiple of sigma for clipping and the method for calculating the sigma
         
@@ -234,6 +239,15 @@ class pixSigmaClip(ClipMethod):
         method : 'rms' or 'mad' for calculating the rms
         """
         self.n = n
+        self.dilate = dilation
+        if sm_kernel is None:
+            self.sm = None
+        else:
+            sm_kernel = np.array(sm_kernel)
+            if len(sm_kernel.shape) == 1:
+                self.sm = sm_kernel[:, None, None]
+            else:
+                self.sm = sm_kernel
         if method == 'rms':
             self.function = self.__rms()
         elif methos == 'mad':
@@ -243,8 +257,27 @@ class pixSigmaClip(ClipMethod):
         """
         calculate a mask from the given data 
         """
-        sigma = self.function(data)
-        return np.abs(data) < self.n*sigma
+        sm_data = self.__smooth(data)
+        sigma = self.function(sm_data)
+        mask = np.abs(sm_data) < self.n*sigma
+        
+        struct_dil = ndimage.generate_binary_structure(len(data.shape), 1)
+        struct_erd = ndimage.generate_binary_structure(len(data.shape), 2)
+        
+        for i in range(self.dilate):
+            mask = ndimage.binary_dilation(mask, structure=struct_dil, border_value=1).astype(mask.dtype)
+            
+        for i in range(self.dilate+2):
+            mask = ndimage.binary_erosion(mask, structure=struct_erd, border_value=1).astype(mask.dtype)
+            
+        return mask
+    
+    def __smooth(self, data):
+        if self.sm is None:
+            return data
+        else:
+            sm_data = convolve(data, self.sm, mode = 'same')
+            return sm_data
     
     def __rms(self):
         return lambda x: np.sqrt(np.nanmean(np.square(x), axis = (0)))
