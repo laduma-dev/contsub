@@ -1,0 +1,33 @@
+libs:
+  spline:
+    _include: (contsub.parser.library)spline.yaml
+  polyn:
+    _include: (contsub.parser.library)polyn.yaml
+  dct:
+    _include: (contsub.parser.library)dct.yaml
+
+inputs:
+  input-image:
+    info: Input image
+    dtype: File
+    must_exist: yes
+    required: yes
+    policies:
+      positional: yes
+  output-image:
+    info: Name of ouput image
+    dtype: File
+  mask-image:
+    info: Mask image
+    dtype: File
+    must_exist: true
+  fit-model:
+    dtype: str
+    choices:
+      - polyn
+      - spline
+      - dct
+    deffault: spline
+  _use: ="libs.{current.fit_model}.inputs"
+outputs:
+  {}

@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 import datetime
 import os
 from astropy.io import fits
