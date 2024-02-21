@@ -1,7 +1,7 @@
 import contsub
-from contsub.parser.utils import load, load_sources, File
-from scabha.schema_utils import clickify_parameters
+from scabha.schema_utils import clickify_parameters, paramfile_loader
 import click
+from scabha.basetypes import File
 from omegaconf import OmegaConf
 import glob
 import os
@@ -9,9 +9,9 @@ import os
 command = "imcontsub"
 thisdir  = os.path.dirname(__file__)
 source_files = glob.glob(f"{thisdir}/library/*.yaml")
-sources = load_sources(source_files)
+sources = [File(item) for item in source_files]
 parserfile = File(f"{thisdir}/{command}.yaml")
-config = load(parserfile, use_sources=sources)
+config = paramfile_loader(parserfile, sources)[command]
 
 @click.command(command)
 @click.version_option(str(contsub.__version__))

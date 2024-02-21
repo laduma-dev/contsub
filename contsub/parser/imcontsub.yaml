@@ -3,8 +3,6 @@ libs:
     _include: (contsub.parser.library)spline.yaml
   polyn:
     _include: (contsub.parser.library)polyn.yaml
-  dct:
-    _include: (contsub.parser.library)dct.yaml
 
 inputs:
   input-image:
@@ -27,7 +25,9 @@ inputs:
       - polyn
       - spline
       - dct
-    deffault: spline
-  _use: ="libs.{current.fit_model}.inputs"
+    default: spline
+  _use:
+   - libs.spline.inputs
+# _use: IF(current.fit-model == spline, libs.spline.inputs, libs.polyn.inputs)
 outputs:
   {}
