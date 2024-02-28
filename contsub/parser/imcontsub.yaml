@@ -1,0 +1,47 @@
+libs:
+  spline:
+    _include: (contsub.parser.library)spline.yaml
+  polyn:
+    _include: (contsub.parser.library)polyn.yaml
+
+inputs:
+  input-image:
+    info: Input image
+    dtype: File
+    must_exist: yes
+    required: yes
+    policies:
+      positional: yes
+  output-prefix:
+    info: Name of ouput image
+    dtype: File
+  mask-image:
+    info: Mask image
+    dtype: File
+    must_exist: true
+  sigma-clip:
+    info: Sigma clip for each iteration. Only required if mask-image is not given.
+    dtype: List[float]
+    default:
+    - 5
+    - 4
+    - 3 
+  fit-model:
+    dtype: str
+    choices:
+      - polyn
+      - spline
+      - dct
+    default: spline
+  overwrite:
+    info: Overwrite output image if it already exists
+    dtype: bool
+    default: yes
+  no-stokes:
+    info: Set this flag if the input image and mask doesn't have a stokes dimension, i.e., has 3 dimensions.
+    dtype: bool
+  _use:
+  - libs.spline.inputs
+# _use: IF(current.fit-model == spline, libs.spline.inputs, libs.polyn.inputs)
+outputs:
+  {}
