@@ -12,7 +12,7 @@ inputs:
     required: yes
     policies:
       positional: yes
-  output-image:
+  output-prefix:
     info: Name of ouput image
     dtype: File
   mask-image:
@@ -36,7 +36,7 @@ inputs:
   overwrite:
     info: Overwrite output image if it already exists
     dtype: bool
-    default: no
+    default: yes
   no-stokes:
     info: Set this flag if the input image and mask doesn't have a stokes dimension, i.e., has 3 dimensions.
     dtype: bool

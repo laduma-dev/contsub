@@ -13,7 +13,6 @@ import astropy.io.fits as fitsio
 
 log = init_logger(BIN.im_plane)
 
-
 command = BIN.im_plane
 thisdir  = os.path.dirname(__file__)
 source_files = glob.glob(f"{thisdir}/library/*.yaml")
@@ -26,12 +25,14 @@ config = paramfile_loader(parserfile, sources)[command]
 @clickify_parameters(config)
 def runit(**kwargs):
     opts = OmegaConf.create(kwargs)
-
+    infits = File(opts.input_image)
+    if not infits.EXISTS:
+        raise FileNotFoundError(f"Input FITS image could not be found at: {infits.PATH}")
     # get rid of stokes axis if it exists
     # TODO(sphe) Automate this
     # Needs to fixed later
     if opts.no_stokes is False:
-        dslice = 0, slice(None), slice(None), slice(None), slice(None)
+        dslice = 0, slice(None), slice(None), slice(None)
     else:
         dslice = slice(None)
         
@@ -70,14 +71,17 @@ def runit(**kwargs):
         #do the fitting
         cont, line = constsub.fitContinuum()
 
-    phdu.close()
+    phdu._close()
     del cube
-    
 
-    #this uses a custom library that I wrote to save the line and continuum cubes
-    outcube = RCube(opts.output_image)
+    if opts.output_prefix:
+        prefix = opts.output_prefix
+    else:
+        prefix = f"{infits.BASEPATH}-contsub"
+        
+    outcube = RCube(infits)
     outcube.openR()
-    outcube.write_like(cont, name = 'cont')
-    outcube.write_like(line, name = 'line')
+    outcube.write_like(cont, outfits=f"{prefix}-cont.fits", overwrite=opts.overwrite)
+    outcube.write_like(line, outfits=f"{prefix}-line.fits", overwrite=opts.overwrite)
     outcube.close()
     
