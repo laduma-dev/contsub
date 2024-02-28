@@ -19,6 +19,13 @@ inputs:
     info: Mask image
     dtype: File
     must_exist: true
+  sigma-clip:
+    info: Sigma clip for each iteration. Only required if mask-image is not given.
+    dtype: List[float]
+    default:
+    - 5
+    - 4
+    - 3 
   fit-model:
     dtype: str
     choices:
@@ -26,8 +33,15 @@ inputs:
       - spline
       - dct
     default: spline
+  overwrite:
+    info: Overwrite output image if it already exists
+    dtype: bool
+    default: no
+  no-stokes:
+    info: Set this flag if the input image and mask doesn't have a stokes dimension, i.e., has 3 dimensions.
+    dtype: bool
   _use:
-   - libs.spline.inputs
+  - libs.spline.inputs
 # _use: IF(current.fit-model == spline, libs.spline.inputs, libs.polyn.inputs)
 outputs:
   {}

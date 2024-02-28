@@ -1,14 +1,10 @@
 #example contsub with this library
 
-import sys
 #append path to scripts to the PATH
-sys.path.insert(1, "/scratch3/users/amirkazemim/pseudoCodes/pyScripts/contSub/")
-from Cubes import RCube, FitsHeader
+from contsub.cubes import RCube, FitsHeader
 from astropy.io import fits
-from Contsub import FitBSpline, ContSub, Mask, pixSigmaClip
+from contsub.imcontsub import FitBSpline, ContSub, Mask, pixSigmaClip
 import time
-
-start_time = time.time()
 
 #open the fits cube
 cube = fits.open('/scratch3/projects/laduma/ExpsAmir/completeness/run001_2deca_m/part022/laduma_dr1.1_image.1304~1420MHz.clean_pbcorr_pbuncorr_ch-01f01_y-04f06_x-04f06.fits')
