@@ -14,6 +14,9 @@ scipy = "^1.12.0"
 katbeam = "^0.1"
 stimela = {git = "https://github.com/caracal-pipeline/stimela.git", branch="master"}
 
+[tool.poetry.scripts]
+imcontsub = "contsub.parser.imcontsub:runit"
+
 [tool.poetry.group.dev.dependencies]
 ipython = "^8.21.0"
 
