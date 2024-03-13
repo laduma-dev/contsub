@@ -1,8 +1,13 @@
 #IP_contsub
 Image-Plane continuum subtraction for FITS cubes
 
-## Documentation
+## Installation
+```bash
+pip install git+https://github.com/SpheMakh/contsub.git
 ```
+
+## Documentation
+```bash
 Usage: imcontsub [OPTIONS] INPUT_IMAGE
 
 Options:
