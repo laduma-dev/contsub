@@ -10,6 +10,7 @@ from contsub.cubes import RCube, FitsHeader
 from contsub.imcontsub import FitBSpline, ContSub, Mask, PixSigmaClip
 from scabha import init_logger
 import astropy.io.fits as fitsio
+import numpy as np
 
 log = init_logger(BIN.im_plane)
 
@@ -45,11 +46,19 @@ def runit(**kwargs):
     cube = phdu.data[dslice]
     freqs = header.retFreq()         
 
-    #get the mask for the first roun
+    #get the mask for the first round
     nomask = True
     if opts.mask_image:
         log.info("Loading mask image")
         mask = fitsio.getdata(opts.mask_image)[dslice]
+        mask_isnan = np.isnan(mask)
+        
+        if mask_isnan.any():
+            mask[mask_isnan] = 0
+            mask[mask_isnan*False] = 1
+        else:
+            del mask_isnan
+            mask = mask*False
         nomask = False
         
     for i in range(niter):
