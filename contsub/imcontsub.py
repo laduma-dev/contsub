@@ -67,9 +67,9 @@ class FitBSpline(FitFunc):
             dvh = np.abs(x[m1h]-x[m2h])/np.mean([x[m1h],x[m2h]])*3e5
             dv = (dvl+dvh)/2
             self._imax = int(len(x)/(self._velwid//dv))+1
-            print('len(x) = {}, dv = {}, {}km/s in chans: {}, max order spline = {}'.format(len(x), dv, self._velwid, self._velwid//dv, self._imax))
+            log.info('nchan = {}, dv = {}, {}km/s in chans: {}, max order spline = {}'.format(len(x), dv, self._velwid, self._velwid//dv, self._imax))
         else:
-            log.debug('probably x values are not changing monotonically, aborting')
+            log.error('The frequency values are not changing monotonically, aborting')
             sys.exit(1)
             
         knotind = np.linspace(0, len(x), self._imax, dtype = int)[1:-1]

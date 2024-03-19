@@ -27,12 +27,23 @@ config = paramfile_loader(parserfile, sources)[command]
 def runit(**kwargs):
     opts = OmegaConf.create(kwargs)
     infits = File(opts.input_image)
+    
+    if opts.output_prefix:
+        prefix = opts.output_prefix
+    else:
+        prefix = f"{infits.BASEPATH}-contsub"
+    
+    outcont = File(f"{prefix}-cont.fits")
+    outline = File(f"{prefix}-line.fits")
+    if opts.overwrite is False and (outcont.EXISTS or outline.EXISTS):
+        raise RuntimeError("At least one output file exists, but --no-overwrite has been set. Unset it to proceed.")
+    
     if not infits.EXISTS:
         raise FileNotFoundError(f"Input FITS image could not be found at: {infits.PATH}")
     # get rid of stokes axis if it exists
     # TODO(sphe) Automate this
     # Needs to fixed later
-    if opts.no_stokes is False:
+    if opts.stokes_axis:
         dslice = 0, slice(None), slice(None), slice(None)
     else:
         dslice = slice(None)
@@ -55,42 +66,40 @@ def runit(**kwargs):
         
         if mask_isnan.any():
             mask[mask_isnan] = 0
-            mask[mask_isnan*False] = 1
+            mask[~mask_isnan] = 1
         else:
             del mask_isnan
-            mask = mask*False
+            mask = ~np.array(mask, dtype=bool)
         nomask = False
         
     for i in range(niter):
         
-        log.info(f'finished fitting round {i}')
         fitfunc = FitBSpline(*[opts.order[i], opts.segments[i]])
-        
         if nomask:
             if i == 0:
+                log.info(f'Creating initial mask from input image')
                 contsub = ContSub(freqs, cube, fitfunc)
                 cont, line = contsub.fitContinuum()
-                continue
             
             #create mask from line emission of first iteration
             clip = PixSigmaClip(opts.sigma_clip[i])
             mask = Mask(clip).getMask(line)
             
+        log.info(f'Running iteration {i+1}')
         constsub = ContSub(freqs, cube, fitfunc, mask)
         #do the fitting
         cont, line = constsub.fitContinuum()
+    log.info("Continuum fitting successful. Ready to write output products.")
+        
 
     phdu._close()
     del cube
-
-    if opts.output_prefix:
-        prefix = opts.output_prefix
-    else:
-        prefix = f"{infits.BASEPATH}-contsub"
         
     outcube = RCube(infits)
     outcube.openR()
-    outcube.write_like(cont, outfits=f"{prefix}-cont.fits", overwrite=opts.overwrite)
-    outcube.write_like(line, outfits=f"{prefix}-line.fits", overwrite=opts.overwrite)
+    
+    log.debug(f'Pixel sums line: {line.sum()}, cont: {cont.sum()}')
+    outcube.write_like(cont, outfits=outcont, overwrite=opts.overwrite)
+    outcube.write_like(line, outfits=outline, overwrite=opts.overwrite)
     outcube.close()
     

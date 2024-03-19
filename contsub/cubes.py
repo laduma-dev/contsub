@@ -192,37 +192,29 @@ class WCube():
                     dimx, dimy = ch.shape
                     if k==0:
                         if i==0:
-                            # ydir.append(ch[:dimx-xr, :dimy-yr])
                             ydir.append(ch[:dimx-xr, :dimy-yr])
                             # log.info('ch[:dimx-xr, :dimy-yr]')
                         elif i==dx-1:
-                            # ydir.append(ch[xh:, :dimy-yr])
                             ydir.append(ch[:dimx-xr, yh:])
                             # log.info('ch[xh:, :dimy-yr]')
                         else:
-                            # ydir.append(ch[xh:dimx-xr, :dimy-yr])
                             ydir.append(ch[:dimx-xr, yh:dimy-yr])
                             # log.info('ch[xh:dimx-xr, :dimy-yr]')
                     elif k==dy-1:
                         if i==0:
-                            # ydir.append(ch[:dimx-xr, yh:])
                             ydir.append(ch[xh:, :dimy-yr])
                             # log.info('ch[:dimx-xr, yh:]')
                         elif i==dx-1:
-                            # ydir.append(ch[xh:, yh:])
                             ydir.append(ch[xh:, yh:])
                             # log.info('ch[xh:, yh:]')
                         else:
-                            # ydir.append(ch[xh:dimx-xr, yh:])
                             ydir.append(ch[xh:, yh:dimy-yr])
                             # log.info('ch[xh:dimx-xr, yh:]')
                     else:
                         if i==0:
-                            # ydir.append(ch[:dimx-xr, yh:dimy-yr])
                             ydir.append(ch[xh:dimx-xr, :dimy-yr])
                             # log.info('ch[:dimx-xr, yh:dimy-yr]')
                         elif i==dx-1:
-                            # ydir.append(ch[xh:, yh:dimy-yr])
                             ydir.append(ch[xh:dimx-xr, yh:])
                             # log.info('ch[xh:, yh:dimy-yr]')
                         else:
@@ -241,7 +233,7 @@ class WCube():
         
     # def _getCombNxy(self, dxdy):
         
-    def spectralCombineFits(self, plist, overwrite = False):
+    def spectralCombineFits(self, plist):
         if len(plist) > 1:
             objlist = [RCube(p) for p in plist]
 
@@ -280,13 +272,13 @@ class WCube():
             imheader = hdrObj.getAppendHeader(nchan)
             
             if os.path.exists(self.path): 
-                if overwrite:
+                if self.overwrite:
                     log.info('Stream cube ({}) exists going to remove and recalculate'.format(self.path))
                     os.remove(self.path)
                     time.sleep(.1)
                 else:
-                    log.info(f'not allowed to overwrite the cube {self.path}')
-                    sys.exit(1)
+                    log.error(f'Not allowed to overwrite the cube {self.path}. Set --overwrite to replace the current file, or change --output-prefix')
+                    raise RuntimeError()
                 
             self.openW(imheader)
             

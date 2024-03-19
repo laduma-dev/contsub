@@ -37,8 +37,9 @@ inputs:
     info: Overwrite output image if it already exists
     dtype: bool
     default: yes
-  no-stokes:
-    info: Set this flag if the input image and mask doesn't have a stokes dimension, i.e., has 3 dimensions.
+  stokes-axis:
+    info: Set this flag if the input image has a stokes dimension. (Default is True).
+    default: yes
     dtype: bool
   _use:
   - libs.spline.inputs
