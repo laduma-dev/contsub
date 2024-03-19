@@ -1,4 +1,4 @@
-#IP_contsub
+# contsub
 Image-Plane continuum subtraction for FITS cubes
 
 ## Installation
@@ -23,9 +23,9 @@ Options:
                                   if mask-image is not given.
   --fit-model [polyn|spline|dct]
   --overwrite / --no-overwrite    Overwrite output image if it already exists
-  --no-stokes / --no-no-stokes    Set this flag if the input image and mask
-                                  doesn't have a stokes dimension, i.e., has 3
-                                  dimensions.
+  --stokes-axis / --no-stokes-axis
+                                  Set this flag if the input image has a
+                                  stokes dimension. (Default is True).
   --help                          Show this message and exit.
 
 ```
