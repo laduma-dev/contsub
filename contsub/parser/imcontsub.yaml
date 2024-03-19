@@ -14,7 +14,7 @@ inputs:
       positional: yes
   output-prefix:
     info: Name of ouput image
-    dtype: File
+    dtype: str
   mask-image:
     info: Mask image
     dtype: File
