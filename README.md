@@ -3,7 +3,7 @@ Image-Plane continuum subtraction for FITS cubes
 
 ## Installation
 ```bash
-pip install git+https://github.com/SpheMakh/contsub.git
+pip install git+https://github.com/laduma-dev/contsub.git
 ```
 
 ## Documentation
