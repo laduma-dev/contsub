@@ -29,3 +29,8 @@ Options:
   --help                          Show this message and exit.
 
 ```
+
+Specifiy the list options (`--order`, `sigma-clip`, etc.,) using square brackets. For example
+```bash
+imcontsub --order [3,3] --segments [400,350] --sigma-clip [5,5] --mask-image fornax_lw13-cube_mask.fits fornax_lw13-cube_data.fits
+```
