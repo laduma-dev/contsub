@@ -16,9 +16,10 @@ stimela = {git = "https://github.com/caracal-pipeline/stimela.git", branch="mast
 
 [tool.poetry.scripts]
 imcontsub = "contsub.parser.imcontsub:runit"
+dimcontsub = "contsub.parser.dimcontsub:runit"
 
 [tool.poetry.group.dev.dependencies]
-ipython = "^8.21.0"
+jupyter = "*"
 
 [build-system]
 requires = ["poetry-core"]
