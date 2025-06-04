@@ -164,17 +164,22 @@ class ContSub():
         cont = np.zeros(self.cube.shape)
         line = np.zeros(self.cube.shape)
         self.function.prepare(self.x)
-            
-        if self.mask is None:
-            for i in range(dimx):
-                for j in range(dimy):
-                    cont[:,j,i], line[:,j,i] = self.function.fit(self.x, self.cube[:,j,i], mask = None, weight = None)
-        else:
-            for i in range(dimx):
-                for j in range(dimy):
-                    cont[:,j,i], line[:,j,i] = self.function.fit(self.x, self.cube[:,j,i], mask = self.mask[:,j,i], weight = None)
-                
-            # log.info(f'row {i} is done')
+        
+        for i in range(dimx):
+            for j in range(dimy):
+                mask = self.mask[:,j,i] if isinstance(self.mask, np.ndarray) else None
+                line_ji = self.cube[:,j,i]
+                # get indices of any nan values
+                nanvals_idx = np.where(np.isnan(line_ji))
+                if len(nanvals_idx[0]) > 0:
+                    if mask is None:
+                        mask = np.ones_like(line_ji)
+                        mask[nanvals_idx] = 0
+                    else:
+                        mask[nanvals_idx] = 0
+                    
+                cont[:,j,i], line[:,j,i] = self.function.fit(self.x, self.cube[:,j,i], 
+                                                            mask = mask, weight = None)
             
         return cont, line
                 
