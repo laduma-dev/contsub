@@ -11,6 +11,7 @@ from contsub.imcontsub import FitBSpline, ContSub, Mask, PixSigmaClip
 from scabha import init_logger
 import astropy.io.fits as fitsio
 import numpy as np
+import time
 
 log = init_logger(BIN.im_plane)
 
@@ -21,6 +22,7 @@ sources = [File(item) for item in source_files]
 parserfile = File(f"{thisdir}/{command}.yaml")
 config = paramfile_loader(parserfile, sources)[command]
 
+start_time = time.time()
 @click.command(command)
 @click.version_option(str(contsub.__version__))
 @clickify_parameters(config)
@@ -52,11 +54,11 @@ def runit(**kwargs):
         raise RuntimeError("The --order and --segments lists must be the size.")
     niter = len(opts.segments)
     # get Fits image cube primary HDU
-    phdu = fitsio.open(opts.input_image)[0]
-    header = FitsHeader(phdu.header)
-    cube = phdu.data[dslice]
-    freqs = header.retFreq()         
-
+    with fitsio.open(opts.input_image) as hdul:
+        header = hdul[0].header
+        cube = hdul[0].data[dslice]
+        freqs = FitsHeader(header).retFreq()         
+    
     #get the mask for the first round
     nomask = True
     if opts.mask_image:
@@ -91,15 +93,20 @@ def runit(**kwargs):
         cont, line = constsub.fitContinuum()
     log.info("Continuum fitting successful. Ready to write output products.")
         
-
-    phdu._close()
     del cube
         
-    outcube = RCube(infits)
-    outcube.openR()
     
     log.debug(f'Pixel sums line: {line.sum()}, cont: {cont.sum()}')
-    outcube.write_like(cont, outfits=outcont, overwrite=opts.overwrite)
-    outcube.write_like(line, outfits=outline, overwrite=opts.overwrite)
-    outcube.close()
+    if opts.stokes_axis:
+        cont = cont[np.newnaxis,...]
+        line = line[np.newnaxis,...]
+    log.info("Writing outputs") 
+    fitsio.writeto(outcont, cont, header, overwrite=opts.overwrite)
+    fitsio.writeto(outline, line, header, overwrite=opts.overwrite)
+
+    # DONE
+    dtime = time.time() - start_time
+    hours = int(dtime/3600)
+    mins = dtime/60 - hours*60
+    log.info(f"Finished. Runtime {hours} hours and {mins:.2f} minutes")
     

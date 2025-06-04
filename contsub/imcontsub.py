@@ -181,8 +181,6 @@ class ContSub():
                 cont[:,j,i], line[:,j,i] = self.function.fit(self.x, self.cube[:,j,i], 
                                                             mask = mask, weight = None)
             
-        # log.info(f'row {i} is done')
-            
         return cont, line
                 
                 
