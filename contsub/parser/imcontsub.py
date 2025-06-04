@@ -73,7 +73,9 @@ def runit(**kwargs):
             del mask_isnan
             mask = ~np.array(mask, dtype=bool)
         nomask = False
-        
+    
+    prev_sclip = opts.sigma_clip[0]
+    sigma_clip = list(opts.sigma_clip)
     for i in range(niter):
         
         fitfunc = FitBSpline(*[opts.order[i], opts.segments[i]])
@@ -84,7 +86,14 @@ def runit(**kwargs):
                 cont, line = contsub.fitContinuum()
             
             #create mask from line emission of first iteration
-            clip = PixSigmaClip(opts.sigma_clip[i])
+            try:
+                sclip = sigma_clip[i]
+            except IndexError:
+                sclip = prev_sclip
+            finally:
+                prev_sclip = sclip
+                
+            clip = PixSigmaClip(sclip)
             mask = Mask(clip).getMask(line)
             
         log.info(f'Running iteration {i+1}')
