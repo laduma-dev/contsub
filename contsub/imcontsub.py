@@ -162,7 +162,7 @@ class ContSub():
         if self.fitsaxes: 
             dimy, dimx = cube.shape[-2:]
         else:
-            dimy, dimx = cube.shape[:2]
+            dimx, dimy = cube.shape[:2]
         contx = np.zeros_like(cube)
         line = np.zeros_like(cube)
         nomask = self.nomask

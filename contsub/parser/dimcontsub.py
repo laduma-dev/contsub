@@ -14,6 +14,7 @@ import dask.array as da
 import time
 import numpy as np
 import xarray as xr
+import dask.multiprocessing
 
 log = init_logger(BIN.im_plane)
 
@@ -47,13 +48,15 @@ def runit(**kwargs):
     if not infits.EXISTS:
         raise FileNotFoundError(f"Input FITS image could not be found at: {infits.PATH}")
     
-    zds = zds_from_fits(infits)
+    chunks = dict(ra = opts.ra_chunks or 64, dec=None, spectral=None)
+    
+
+    zds = zds_from_fits(infits, chunks=chunks)
     base_dims = ["ra", "dec", "spectral", "stokes"]
     if not hasattr(zds, "stokes"):
         base_dims.remove("stokes")
     
     dims_string = ",".join([f"{dim}" for dim in base_dims])
-    signature = f"(spectral),({dims_string}),({dims_string}),(),() -> ({dims_string})"
     has_stokes = "stokes" in base_dims
     stokes_idx = opts.stokes_index
     if has_stokes:
@@ -61,64 +64,75 @@ def runit(**kwargs):
     else:
         cube = zds.DATA
     
-    
-    i = 0
-    nworkers = 3
-    sigma_clip = 5
-    if opts.mask_image:
-        mask_future = zds_from_fits(opts.mask_image).DATA
+    sdim = (None,) # scalar dimension
+    niter = 1
+    nomask = True 
+    if getattr(opts, "mask_image", None):
+        mask = zds_from_fits(opts.mask_image, chunks=chunks).DATA
         nomask = False
-    else:
-        nomask = True
-        
-    if nomask and opts.automask:
-        signature = f"(spectral),({dims_string}),(),(),() -> ({dims_string})"
-        make_mask = da.gufunc(get_automask, 
-                    signature = signature,
-                    allow_rechunk = True,
-                    output_dtypes=np.ndarray)
-        
-        mask_future = make_mask(
-            zds.FREQS.data,
-            cube.data,
-            sigma_clip,
-            opts.order[i],
-            opts.segments[i],
+    
+    get_mask = da.gufunc(
+        get_automask,
+        signature=f"(spectral),({dims_string}),(),(),() -> ({dims_string})",
+        meta=(np.ndarray((), cube.dtype),),
+        allow_rechunk=True,
     )
-        nomask = False
-    else:
-        mask_future = da.zeros_like(cube, dtype=bool)
 
-    
-    signature = f"(spectral),({dims_string}),({dims_string}),() -> (spectral,dec,ra),(spectral,dec,ra)"
-    
-    fitfunc = FitBSpline(opts.order[i], opts.segments[i])
-    contfit = ContSub(fitfunc, nomask=False, reshape=True, fitsaxes=False)
-    
+    signature = f"(spectral),({dims_string}),({dims_string}) -> (spectral,dec,ra),(spectral,dec,ra)"
     meta = np.ndarray((), cube.dtype), np.ndarray((), cube.dtype)
+    xspec = zds.FREQS.data
     
-    fitprods = xr.apply_ufunc(
-        contfit.fitContinuum,
-        zds.FREQS,
-        cube,
-        mask_future,
-        input_core_dims = [ ("spectral",), base_dims, base_dims ],
-        output_core_dims= [ ("spectral", "dec", "ra"), ("spectral", "dec", "ra")],
-        dask='parallelized',
-        dask_gufunc_kwargs = dict(meta=meta, allow_rechunk=True),
+    dask.config.set(scheduler='threads', num_workers = opts.nworkers)
+    
+    for iter_i in range(niter):
+        futures = []
+        fitfunc = FitBSpline(opts.order[iter_i], opts.segments[iter_i])
         
-    )[0].compute(num_workers=5, shceduler="processes")
-    
+        for biter,dblock in enumerate(cube.data.blocks):
+            if nomask and opts.automask:
+                mask_future = get_mask(xspec,
+                                    dblock,
+                                    opts.sigma_clip[0], 
+                                    opts.order[iter_i],
+                                    opts.segments[iter_i],
+                )
+            elif nomask is False:
+                mask_future = mask.data.blocks[biter]
+            else:
+                mask_future = da.zeros_like(dblock, dtype=bool)
+            
+            contfit = ContSub(fitfunc, nomask=False, reshape=False, fitsaxes=False)
+            getfit = da.gufunc(
+                contfit.fitContinuum,
+                signature=signature,
+                meta=meta,
+                allow_rechunk=True,
+            )
+            
+            futures.append(getfit(
+                xspec,
+                dblock,
+                mask_future,
+            ))
+        
+        results = da.compute(futures)
+        
+        continuum = np.concatenate(
+            [ results[0][chunk_][0] for chunk_ in range(biter+1)],
+        ).transpose((2,1,0))
+        
+        
+        line = np.concatenate(
+            [ results[0][chunk_][1] for chunk_ in range(biter+1)],
+        ).transpose((2,1,0))
+        
     header = zds.attrs["header"]
     
     log.info("Writing outputs") 
     
     if has_stokes:
-        continuum = fitprods[0][...,np.newaxis]
-        line = fitprods[1][...,np.newaxis]
-    else:
-        continuum = fitprods[0]
-        line = fitprods[1]
+        continuum = continuum[...,np.newaxis]
+        line = line[...,np.newaxis]
     
     fitsio.writeto(outcont, continuum, header, overwrite=opts.overwrite)
     fitsio.writeto(outline, line, header, overwrite=opts.overwrite)

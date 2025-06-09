@@ -51,14 +51,14 @@ inputs:
     info: "### DEPRECATED #### Set this flag if the input image has a stokes dimension. (Default is True)."
     default: yes
     dtype: bool
-  chunk-ra:
-    info: Chunking along RA-axis
+  ra-chunks:
+    info: Chunking along RA-axis. If set to zero, no Chunking is perfomed.
     dtype: int 
     default: 64
-  chunk-dec:
-    info: Chunking along Dec-axis
+  nworkers:
+    info: Number of workers (one per CPU)
     dtype: int
-    default: 64
+    default: 4
   _use:
   - libs.spline.inputs
 # _use: IF(current.fit-model == spline, libs.spline.inputs, libs.polyn.inputs)

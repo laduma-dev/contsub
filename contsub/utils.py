@@ -21,7 +21,7 @@ def get_automask(xspec, cube, sigma_clip=5, order=3, segments=400):
     log.info("Mask created suceesfully")
     return mask
 
-def zds_from_fits(fname, chunks={1: 200, 2:50}):
+def zds_from_fits(fname, chunks=None):
     """ Creates Zarr store from a FITS file. The resulting array has 
     dimensions = RA, DEC, SPECTRAL[, STOKES]
 
@@ -36,8 +36,8 @@ def zds_from_fits(fname, chunks={1: 200, 2:50}):
     Returns:
         Zarr: Zarr array (persistant store, mode=w)
     """
-
-    fds = xds_from_fits(fname, chunks=chunks)[0]
+    chunks = chunks or dict(ra=64,dec=None, spectral=None)
+    fds = xds_from_fits(fname)[0]
     wcs = WCS(fds.hdu.header, naxis="spectral stokes".split())
     with fitsio.open(fname) as hdul:
         header = hdul[0].header
@@ -65,6 +65,6 @@ def zds_from_fits(fname, chunks={1: 200, 2:50}):
                     ),
     )
     
-    return ds
-
+    return ds.chunk(chunks)
+    
 #    return ds.to_zarr(store=f"{fname}.zarr", mode="w")
