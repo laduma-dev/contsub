@@ -82,8 +82,8 @@ def runit(**kwargs):
         if nomask:
             if i == 0:
                 log.info(f'Creating initial mask from input image')
-                contsub = ContSub(freqs, cube, fitfunc)
-                cont, line = contsub.fitContinuum()
+                contsub = ContSub(fitfunc, nomask=True)
+                cont, line = contsub.fitContinuum(freqs, cube, mask=None)
             
             #create mask from line emission of first iteration
             try:
@@ -97,9 +97,9 @@ def runit(**kwargs):
             mask = Mask(clip).getMask(line)
             
         log.info(f'Running iteration {i+1}')
-        constsub = ContSub(freqs, cube, fitfunc, mask)
+        constsub = ContSub(fitfunc, nomask=False, reshape=False)
         #do the fitting
-        cont, line = constsub.fitContinuum()
+        cont, line = constsub.fitContinuum(freqs, cube, mask)
     log.info("Continuum fitting successful. Ready to write output products.")
         
     del cube

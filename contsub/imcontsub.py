@@ -58,7 +58,7 @@ class FitBSpline(FitFunc):
             rs = np.random.SeedSequence()
         self.rng = np.random.default_rng(rs)
         
-    def prepare(self, x, data = None, mask = None, weight = None):
+    def prepare(self, x):
         msort = np.argpartition(x, -2)
         m1l, m2l = msort[-2:]
         m1h, m2h = msort[:2]
@@ -85,9 +85,10 @@ class FitBSpline(FitFunc):
         mask : a mask
         weight : weights for fitting the Spline (not implemented), using mask as weight
         """
+        weight = mask
         inds = self._knots()
         # log.info(f'inds: {inds}')
-        splCfs = splrep(x, data, task = -1, w = mask, t = x[inds], k = self._order)
+        splCfs = splrep(x, data, task = -1, w = weight, t = x[inds], k = self._order)
         spl = splev(x, splCfs)
         return spl, data-spl
 
@@ -112,7 +113,7 @@ class FitMedFilter(FitFunc):
             self._imax = int(self._velwid//dv)
             if self._imax %2 == 0:
                 self._imax += 1
-            print('len(x) = {}, dv = {}, {}km/s in chans: {}'.format(len(x), dv, self._velwid, self._velwid//dv))
+            log.info('len(x) = {}, dv = {}, {}km/s in chans: {}'.format(len(x), dv, self._velwid, self._velwid//dv))
         else:
             log.debug('probably x values are not changing monotonically, aborting')
             sys.exit(1)
@@ -141,47 +142,62 @@ class ContSub():
     """
     a class for performing continuum subtraction on data
     """
-    def __init__(self, x, cube, function, mask=None):
+    def __init__(self, function, nomask, reshape=False, fitsaxes=True):
         """
         each object can be initiliazed by passing a data cube, a fitting function, and a mask
         cube : a fits cube containing the data
         function : a fitting function should be built on FitFunc class
         mask : a fitting mask where the pixels that should be used for fitting has a `True` value
         """
-        self.cube = cube
+        self.nomask = nomask
         self.function = function
-        if mask is None:
-            self.mask = None
-        else:
-            self.mask = np.array(mask, dtype = bool)
-        self.x = x
+        self.reshape = reshape
+        self.fitsaxes = fitsaxes
         
-    def fitContinuum(self):
+        
+    def fitContinuum(self, xspec, cube, mask):
         """
         fits the data with the desired function and returns the continuum and the line
         """
-        dimy, dimx = self.cube.shape[-2:]
-        cont = np.zeros(self.cube.shape)
-        line = np.zeros(self.cube.shape)
-        self.function.prepare(self.x)
+        if self.fitsaxes: 
+            dimy, dimx = cube.shape[-2:]
+        else:
+            dimy, dimx = cube.shape[:2]
+        contx = np.zeros_like(cube)
+        line = np.zeros_like(cube)
+        nomask = self.nomask
+        if nomask:
+            mask = None
+        fitfunc = self.function
+        self.xspec = fitfunc.prepare(xspec)
         
-        for i in range(dimx):
-            for j in range(dimy):
-                mask = self.mask[:,j,i] if isinstance(self.mask, np.ndarray) else None
-                line_ji = self.cube[:,j,i]
+        for ra in range(dimx):
+            for dec in range(dimy):
+                if self.fitsaxes:
+                    slc = slice(None),dec,ra
+                else:
+                    slc = ra,dec,slice(None)
+                mask_ij = mask[slc] if nomask == False else None
+                cube_ij = cube[slc]
                 # get indices of any nan values
-                nanvals_idx = np.where(np.isnan(line_ji))
+                nanvals_idx = np.where(np.isnan(cube_ij))
                 if len(nanvals_idx[0]) > 0:
-                    if mask is None:
-                        mask = np.ones_like(line_ji)
-                        mask[nanvals_idx] = 0
+                    if nomask:
+                        mask_ij = np.ones_like(cube_ij)
+                        mask_ij[nanvals_idx] = 0
                     else:
-                        mask[nanvals_idx] = 0
-                    
-                cont[:,j,i], line[:,j,i] = self.function.fit(self.x, self.cube[:,j,i], 
-                                                            mask = mask, weight = None)
+                        mask_ij[nanvals_idx] = 0
+                contx[slc], line[slc] = fitfunc.fit(xspec, cube_ij, 
+                                                mask = mask_ij, weight = None)
+        
+
+        if self.reshape:
+            newshape = (2,1,0)
             
-        return cont, line
+            contx = np.transpose(contx, newshape)
+            line = np.transpose(line, newshape) 
+        
+        return contx, line
                 
                 
 class Mask():

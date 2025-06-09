@@ -12,6 +12,7 @@ numpy = "^1.22.4"
 astropy = "^6.0.0"
 scipy = "^1.12.0"
 xarray-fits = "*"
+zarr = "^2.18"
 stimela = {git = "https://github.com/caracal-pipeline/stimela.git", branch="master"}
 
 [tool.poetry.scripts]
