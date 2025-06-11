@@ -90,7 +90,7 @@ class FitBSpline(FitFunc):
         # log.info(f'inds: {inds}')
         splCfs = splrep(x, data, task = -1, w = weight, t = x[inds], k = self._order)
         spl = splev(x, splCfs)
-        return spl, data-spl
+        return spl
 
 class FitMedFilter(FitFunc):
     """
@@ -181,16 +181,19 @@ class ContSub():
                 cube_ij = cube[slc]
                 # get indices of any nan values
                 nanvals_idx = np.where(np.isnan(cube_ij))
+                if len(nanvals_idx[0]) == len(cube_ij):
+                    continue
                 if len(nanvals_idx[0]) > 0:
                     if nomask:
                         mask_ij = np.ones_like(cube_ij)
                         mask_ij[nanvals_idx] = 0
                     else:
                         mask_ij[nanvals_idx] = 0
-                contx[slc], line[slc] = fitfunc.fit(xspec, cube_ij, 
+                
+                contx[slc] = fitfunc.fit(xspec, cube_ij, 
                                                 mask = mask_ij, weight = None)
         
-
+        line = cube - contx
         if self.reshape:
             newshape = (2,1,0)
             
