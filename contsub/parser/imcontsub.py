@@ -107,8 +107,8 @@ def runit(**kwargs):
     
     log.debug(f'Pixel sums line: {line.sum()}, cont: {cont.sum()}')
     if opts.stokes_axis:
-        cont = cont[np.newnaxis,...]
-        line = line[np.newnaxis,...]
+        cont = cont[np.newaxis,...]
+        line = line[np.newaxis,...]
     log.info("Writing outputs") 
     fitsio.writeto(outcont, cont, header, overwrite=opts.overwrite)
     fitsio.writeto(outline, line, header, overwrite=opts.overwrite)
