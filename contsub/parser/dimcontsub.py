@@ -56,7 +56,7 @@ def runit(**kwargs):
     if not hasattr(zds, "stokes"):
         base_dims.remove("stokes")
     
-    dims_string = "ra,dec,spectral"
+    dims_string = ",".join([f"{dim}" for dim in base_dims])
     has_stokes = "stokes" in base_dims
     stokes_idx = opts.stokes_index
     if has_stokes:
@@ -70,7 +70,6 @@ def runit(**kwargs):
     if getattr(opts, "mask_image", None):
         mask = zds_from_fits(opts.mask_image, chunks=chunks).DATA
         nomask = False
-            
     
     get_mask = da.gufunc(
         get_automask,
