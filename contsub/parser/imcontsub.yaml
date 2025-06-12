@@ -24,27 +24,18 @@ inputs:
     dtype: List[float]
     policies:
       repeat: "[]"
-    default:
-    - 5
-    - 4
-    - 3 
   fit-model:
+    info: Fit function to model the continuum. ** Only the spline is available in this version **.
     dtype: str
     choices:
-      - polyn
       - spline
-      - dct
     default: spline
-  automask:
-    info: Generate mask from input cube
-    dtype: bool
-    default: False
   overwrite:
     info: Overwrite output image if it already exists
     dtype: bool
     default: yes
   stokes-index:
-    info: Index of stokes channel (zero-based) to use.
+    info: "### NOT IMPLEMENTED. Stokes index 0 is assumed ### Index of stokes channel (zero-based) to use."
     dtype: int
     default: 0
   stokes-axis:
@@ -61,6 +52,5 @@ inputs:
     default: 4
   _use:
   - libs.spline.inputs
-# _use: IF(current.fit-model == spline, libs.spline.inputs, libs.polyn.inputs)
 outputs:
   {}

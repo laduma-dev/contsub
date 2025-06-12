@@ -7,13 +7,13 @@ import glob
 import os
 from contsub import BIN
 from scabha import init_logger
-from contsub.imcontsub import FitBSpline, ContSub
+from contsub.imcontsub import ContSub
+from contsub.fitfuncs import FitBSpline
 import astropy.io.fits as fitsio
 from contsub.utils import zds_from_fits, get_automask
 import dask.array as da
 import time
 import numpy as np
-import xarray as xr
 import dask.multiprocessing
 
 log = init_logger(BIN.im_plane)
@@ -64,12 +64,17 @@ def runit(**kwargs):
     else:
         cube = zds.DATA
     
-    sdim = (None,) # scalar dimension
     niter = 1
-    nomask = True 
+    nomask = True
+    automak = False 
     if getattr(opts, "mask_image", None):
         mask = zds_from_fits(opts.mask_image, chunks=chunks).DATA
         nomask = False
+    if getattr(opts, "sigma_clip", None):
+        automask = True
+        sigma_clip = list(opts.sigma_clip)
+    else:
+        sigma_clip = None
     
     get_mask = da.gufunc(
         get_automask,
@@ -87,12 +92,12 @@ def runit(**kwargs):
     for iter_i in range(niter):
         futures = []
         fitfunc = FitBSpline(opts.order[iter_i], opts.segments[iter_i])
-        
         for biter,dblock in enumerate(cube.data.blocks):
-            if nomask and opts.automask:
+            if nomask and automask:
+                sclip = sigma_clip[0]
                 mask_future = get_mask(xspec,
                                     dblock,
-                                    opts.sigma_clip[0], 
+                                    sclip, 
                                     opts.order[iter_i],
                                     opts.segments[iter_i],
                 )

@@ -2,7 +2,9 @@ from xarrayfits import xds_from_fits
 import xarray as xr
 from astropy.wcs import WCS
 from contsub.cubes import FitsHeader
-from contsub.imcontsub import ContSub, Mask, PixSigmaClip, FitBSpline
+from contsub.imcontsub import ContSub
+from contsub.masking import PixSigmaClip, Mask
+from contsub.fitfuncs import FitBSpline
 from contsub import BIN
 from scabha import init_logger
 import astropy.io.fits as fitsio
@@ -12,13 +14,13 @@ log = init_logger(BIN.im_plane)
 def get_automask(xspec, cube, sigma_clip=5, order=3, segments=400):
 
     log.info("Creating binary mask as requested") 
-    fitfunc = FitBSpline(order,segments)
+    fitfunc = FitBSpline(order, segments)
     contsub = ContSub(fitfunc, nomask=True, reshape=False, fitsaxes=False)
     _,line = contsub.fitContinuum(xspec, cube, mask=None)
     clip = PixSigmaClip(sigma_clip)
         
     mask = Mask(clip).getMask(line)
-    log.info("Mask created suceesfully")
+    log.info("Mask created sucessfully")
     return mask
 
 def zds_from_fits(fname, chunks=None):
