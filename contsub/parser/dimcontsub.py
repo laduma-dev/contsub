@@ -56,7 +56,7 @@ def runit(**kwargs):
     if not hasattr(zds, "stokes"):
         base_dims.remove("stokes")
     
-    dims_string = ",".join([f"{dim}" for dim in base_dims])
+    dims_string = "ra,dec,spectral"
     has_stokes = "stokes" in base_dims
     stokes_idx = opts.stokes_index
     if has_stokes:
