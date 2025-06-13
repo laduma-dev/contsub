@@ -105,9 +105,9 @@ def runit(**kwargs):
                                     opts.segments[iter_i],
                 )
             elif nomask is False:
-                mask_future = mask.data.blocks[biter]
+                mask_future = mask.data.blocks[biter] == False
             else:
-                mask_future = da.zeros_like(dblock, dtype=bool)
+                mask_future = da.ones_like(dblock, dtype=bool)
             
             contfit = ContSub(fitfunc, nomask=False,
                             reshape=False, fitsaxes=False,
