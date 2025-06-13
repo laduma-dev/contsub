@@ -37,11 +37,14 @@ class ContSub():
         nomask = self.nomask
         if nomask:
             mask = None
+        #elif isinstance(mask, np.ndarray):
+            # mask will be used weights. So invert it
+        #    mask = mask == False 
         fitfunc = self.function
         if not fitfunc.preped:
             fitfunc.prepare(xspec)
-        skipped_lines = 0
-        
+
+        skipped_lines = 0 
         for ra in range(dimx):
             for dec in range(dimy):
                 if self.fitsaxes:
@@ -52,8 +55,9 @@ class ContSub():
                 cube_ij = cube[slc]
                 # get indices of any nan values
                 nanvals_idx = np.where(np.isnan(cube_ij))
-                if len(nanvals_idx[0])/nchan * 100 < self.fit_tol:
+                if len(nanvals_idx[0]) == nchan:
                     skipped_lines += 1
+                    contx[slc] = np.full_like(cube_ij, np.nan)
                     continue
                 if len(nanvals_idx[0]) > 0:
                     if nomask:
@@ -61,10 +65,14 @@ class ContSub():
                         mask_ij[nanvals_idx] = 0
                     else:
                         mask_ij[nanvals_idx] = 0
-                if getattr(mask_ij, "size", nchan+1) / nchan * 100 < self.fit_tol:                        
+                
+                # Flag LOS and continue if too many pixels are flagged
+                if isinstance(mask_ij, np.ndarray) and \
+                            (nchan - mask_ij.sum()) / nchan > self.fit_tol/100:
                     skipped_lines += 1
                     contx[slc] = np.full_like(cube_ij, np.nan)
-                    continue 
+                    continue
+                
                 contx[slc] = fitfunc.fit(xspec, cube_ij, 
                                                 weights = mask_ij)
         
@@ -74,8 +82,8 @@ class ContSub():
             
             contx = np.transpose(contx, newshape)
             line = np.transpose(line, newshape) 
+            
         if skipped_lines > 0:
             log.info(f"NB!!! This run set {skipped_lines} spectra to NaN because of --cont-fit-tol.")
-        
         return contx, line
     
