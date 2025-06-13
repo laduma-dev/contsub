@@ -30,6 +30,11 @@ inputs:
     choices:
       - spline
     default: spline
+  cont-fit-tol:
+    info: "Minimum perentage of valid spectrum data points required to do a fit.
+          Spectra below this tolerance will be set to NaN.
+          Leaving this unset may result in poor or NaN spectra in the output cubes"
+    dtype: float
   overwrite:
     info: Overwrite output image if it already exists
     dtype: bool

@@ -29,10 +29,14 @@ config = paramfile_loader(parserfile, sources)[command]
 @click.command("dimcontsub")
 @click.version_option(str(contsub.__version__))
 @clickify_parameters(config)
-def runit(**kwargs):
+def runit(**kwargs):    
     start_time = time.time()
- 
+    
     opts = OmegaConf.create(kwargs)
+    if opts.cont_fit_tol > 100:
+        log.warning("Requested --cont-fit-tol is larger than 100 percent. Assuming it is 100.")
+        opts.cont_fit_tol = 100
+        
     infits = File(opts.input_image)
     
     if opts.output_prefix:
@@ -66,7 +70,7 @@ def runit(**kwargs):
     
     niter = 1
     nomask = True
-    automak = False 
+    automask = False 
     if getattr(opts, "mask_image", None):
         mask = zds_from_fits(opts.mask_image, chunks=chunks).DATA
         nomask = False
@@ -88,7 +92,6 @@ def runit(**kwargs):
     xspec = zds.FREQS.data
     
     dask.config.set(scheduler='threads', num_workers = opts.nworkers)
-    
     for iter_i in range(niter):
         futures = []
         fitfunc = FitBSpline(opts.order[iter_i], opts.segments[iter_i])
@@ -106,7 +109,10 @@ def runit(**kwargs):
             else:
                 mask_future = da.zeros_like(dblock, dtype=bool)
             
-            contfit = ContSub(fitfunc, nomask=False, reshape=False, fitsaxes=False)
+            contfit = ContSub(fitfunc, nomask=False,
+                            reshape=False, fitsaxes=False,
+                            fit_tol=opts.cont_fit_tol)
+            
             getfit = da.gufunc(
                 contfit.fitContinuum,
                 signature=signature,
