@@ -23,6 +23,7 @@ class Mask():
         calculates the mask given the data
         """
         return self.method.createMask(data)
+
         
 class ClipMethod(ABC):
     """
@@ -73,10 +74,12 @@ class PixSigmaClip(ClipMethod):
         struct_erd = ndimage.generate_binary_structure(len(data.shape), 2)
         
         for i in range(self.dilate):
-            mask = ndimage.binary_dilation(mask, structure=struct_dil, border_value=1).astype(mask.dtype)
+            mask = ndimage.binary_dilation(mask, structure=struct_dil,
+                                        border_value=1).astype(mask.dtype)
             
         for i in range(self.dilate+2):
-            mask = ndimage.binary_erosion(mask, structure=struct_erd, border_value=1).astype(mask.dtype)
+            mask = ndimage.binary_erosion(mask, structure=struct_erd,
+                                        border_value=1).astype(mask.dtype)
             
         return mask
     
@@ -122,4 +125,3 @@ class ChanSigmaClip(ClipMethod):
     
     def __mad(self):
         return lambda x: np.nanmedian(np.abs(np.nanmean(x)-x), axis = (1,2))
-

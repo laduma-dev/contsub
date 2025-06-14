@@ -12,8 +12,21 @@ import astropy.io.fits as fitsio
 log = init_logger(BIN.im_plane)
 
 def get_automask(xspec, cube, sigma_clip=5, order=3, segments=400):
+    """
+    Generate a binary mask by sigma-thresholding the input cube
 
-    log.info("Creating binary mask as requested") 
+    Args:
+        xspec (Array): Spectral coordinates
+        cube (Array): Data cdube
+        sigma_clip (int, optional): _description_. Defaults to 5.
+        order (int, optional): _description_. Defaults to 3.
+        segments (int, optional): Length of spline segment in km/s. Defaults to 400.
+
+    Returns:
+        Array : Binary mask (False is masked, True is not)
+    """
+
+    log.info("Creating binary mask as requested")
     fitfunc = FitBSpline(order, segments)
     contsub = ContSub(fitfunc, nomask=True, reshape=False, fitsaxes=False)
     _,line = contsub.fitContinuum(xspec, cube, mask=None)
@@ -22,6 +35,7 @@ def get_automask(xspec, cube, sigma_clip=5, order=3, segments=400):
     mask = Mask(clip).getMask(line)
     log.info("Mask created sucessfully")
     return mask
+
 
 def zds_from_fits(fname, chunks=None):
     """ Creates Zarr store from a FITS file. The resulting array has 

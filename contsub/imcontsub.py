@@ -12,9 +12,13 @@ class ContSub():
     def __init__(self, function, nomask, reshape=False, fitsaxes=True, fit_tol=0):
         """
         each object can be initiliazed by passing a data cube, a fitting function, and a mask
-        cube : a fits cube containing the data
-        function : a fitting function should be built on FitFunc class
-        mask : a fitting mask where the pixels that should be used for fitting has a `True` value
+        Args:
+            function (Callable) : a fitting function should be built on FitFunc class
+            nomask (bool): Ignore mask if set
+            fitsaxis (fits): Is the data in the standard FITS convention (y,x,spectral)?
+            reshape (bool): Reshape output to FITS convention before exit.
+        Returns:
+            None
         """
         self.nomask = nomask
         self.function = function
@@ -26,7 +30,16 @@ class ContSub():
     def fitContinuum(self, xspec, cube, mask):
         """
         fits the data with the desired function and returns the continuum and the line
+        
+        Args:
+            xspec (Array): Apectrum coordinates_
+            cube (Array): Data cube to subtract continuum from
+            mask (Array): Binary data weights. True -> will be used in fir, False will not be used in fit.
+
+        Returns:
+            (Array,Array): Continuum fit and residual
         """
+        
         if self.fitsaxes: 
             nchan, dimy, dimx = cube.shape
         else:
@@ -37,9 +50,7 @@ class ContSub():
         nomask = self.nomask
         if nomask:
             mask = None
-        #elif isinstance(mask, np.ndarray):
-            # mask will be used weights. So invert it
-        #    mask = mask == False 
+            
         fitfunc = self.function
         if not fitfunc.preped:
             fitfunc.prepare(xspec)
@@ -53,18 +64,17 @@ class ContSub():
                     slc = ra,dec,slice(None)
                 mask_ij = mask[slc] if nomask == False else None
                 cube_ij = cube[slc]
-                # get indices of any nan values
+                
+                # Find and mask NaNs in the data
                 nanvals_idx = np.where(np.isnan(cube_ij))
-                if len(nanvals_idx[0]) == nchan:
-                    skipped_lines += 1
+                nansize = len(nanvals_idx[0])
+                if nansize == nchan:
                     contx[slc] = np.full_like(cube_ij, np.nan)
                     continue
-                if len(nanvals_idx[0]) > 0:
+                elif nansize > 0:
                     if nomask:
                         mask_ij = np.ones_like(cube_ij)
-                        mask_ij[nanvals_idx] = 0
-                    else:
-                        mask_ij[nanvals_idx] = 0
+                    mask_ij[nanvals_idx] = 0
                 
                 # Flag LOS and continue if too many pixels are flagged
                 if isinstance(mask_ij, np.ndarray) and \
@@ -84,6 +94,7 @@ class ContSub():
             line = np.transpose(line, newshape) 
             
         if skipped_lines > 0:
-            log.info(f"NB!!! This run set {skipped_lines} spectra to NaN because of --cont-fit-tol.")
+            log.info(f"This worker set {skipped_lines} spectra to NaN because of --cont-fit-tol.")
+            
         return contx, line
     
