@@ -77,11 +77,12 @@ class ContSub():
                     mask_ij[nanvals_idx] = 0
                 
                 # Flag LOS and continue if too many pixels are flagged
-                if isinstance(mask_ij, np.ndarray) and \
+                if self.fit_tol > 0:
+                    if isinstance(mask_ij, np.ndarray) and \
                             (nchan - mask_ij.sum()) / nchan > self.fit_tol/100:
-                    skipped_lines += 1
-                    contx[slc] = np.full_like(cube_ij, np.nan)
-                    continue
+                        skipped_lines += 1
+                        contx[slc] = np.full_like(cube_ij, np.nan)
+                        continue
                 
                 contx[slc] = fitfunc.fit(xspec, cube_ij, 
                                                 weights = mask_ij)

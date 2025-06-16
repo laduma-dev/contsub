@@ -145,11 +145,14 @@ def runit(**kwargs):
         continuum = continuum[...,np.newaxis]
         line = line[...,np.newaxis]
     
+    log.info(f"Writing fitted continuum data to: {outcont}")
     fitsio.writeto(outcont, continuum, header, overwrite=opts.overwrite)
+    log.info(f"Writing residual data (line cube) to: {outline}")
     fitsio.writeto(outline, line, header, overwrite=opts.overwrite)
 
     # DONE
     dtime = time.time() - start_time
     hours = int(dtime/3600)
     mins = dtime/60 - hours*60
-    log.info(f"Finished. Runtime {hours} hours and {mins:.2f} minutes")
+    secs = (mins%1) * 60
+    log.info(f"Finished. Runtime {hours}:{int(mins)}:{secs:.1f}")
