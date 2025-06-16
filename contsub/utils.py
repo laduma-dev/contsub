@@ -2,7 +2,7 @@ from xarrayfits import xds_from_fits
 import xarray as xr
 from astropy.wcs import WCS
 from contsub.cubes import FitsHeader
-from contsub.imcontsub import ContSub
+from contsub.image_plane import ContSub
 from contsub.masking import PixSigmaClip, Mask
 from contsub.fitfuncs import FitBSpline
 from contsub import BIN
