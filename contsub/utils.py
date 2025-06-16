@@ -1,15 +1,17 @@
 from xarrayfits import xds_from_fits
 import xarray as xr
 from astropy.wcs import WCS
-from contsub.cubes import FitsHeader
 from contsub.image_plane import ContSub
 from contsub.masking import PixSigmaClip, Mask
 from contsub.fitfuncs import FitBSpline
 from contsub import BIN
 from scabha import init_logger
+import astropy.units as u
 import astropy.io.fits as fitsio
-
+import numpy as np
+import datetime
 log = init_logger(BIN.im_plane)
+
 
 def get_automask(xspec, cube, sigma_clip=5, order=3, segments=400):
     """
@@ -29,7 +31,7 @@ def get_automask(xspec, cube, sigma_clip=5, order=3, segments=400):
     log.info("Creating binary mask as requested")
     fitfunc = FitBSpline(order, segments)
     contsub = ContSub(fitfunc, nomask=True, reshape=False, fitsaxes=False)
-    _,line = contsub.fitContinuum(xspec, cube, mask=None)
+    _, line = contsub.fitContinuum(xspec, cube, mask=None)
     clip = PixSigmaClip(sigma_clip)
         
     mask = Mask(clip).getMask(line)
@@ -80,7 +82,107 @@ def zds_from_fits(fname, chunks=None):
             header = header,
                     ),
     )
-    
+
     return ds.chunk(chunks)
-    
 #    return ds.to_zarr(store=f"{fname}.zarr", mode="w")
+
+
+class FitsHeader():
+    def __init__(self, header):
+        self._header = header.copy()
+        
+    def retFreq(self):
+        """
+        Extract the part of the cube name that will be used in the name of
+        the averaged cube
+
+        Parameters
+        ----------
+        header : `~astropy.io.fits.Header`
+            header object from the fits file
+
+        Returns
+        -------
+        frequency
+            a 1D numpy array of channel frequencies in MHz  
+        """
+        
+        if not ('TIMESYS' in self._header):
+            self._header['TIMESYS'] = 'utc'
+        elif self._header['TIMESYS'] != 'utc':
+            self._header['TIMESYS'] = 'utc'
+        freqDim = self._header['NAXIS3']
+        wcs3d=WCS(self._header)
+        try:
+            wcsfreq = wcs3d.spectral
+        except:
+            wcsfreq = wcs3d.sub(['spectral'])   
+        return np.around(wcsfreq.pixel_to_world(np.arange(0,freqDim)).to(u.MHz).value, decimals = 7)
+        
+    def getAppendHeader(self, nchan):
+        return self.spectralSplitHeader(nchan, orig = 'append_fits')
+    
+    def getTableHeader(self, nchan):
+        self._header['NAXIS2'] = nchan
+        self._header['NCHAN'] = nchan
+        if 'OBSERVER' in list(self._header.keys()):
+            self._header.remove('OBSERVER')
+        self._header['DATE'] = str(datetime.datetime.now()).replace(' ','T')
+        self._header['ORIGIN'] = 'A. Kazemi-Moridani (table_header)'
+        return self._header
+    
+    def getCombineHeader(self, dimx, dimy):
+        self._header['NAXIS1'] = int(dimx)
+        self._header['NAXIS2'] = int(dimy)
+        # self._header['CRPIX1'] = xcen 
+        # self._header['CRPIX2'] = ycen
+        if 'OBSERVER' in list(self._header.keys()):
+            self._header.remove('OBSERVER')
+        self._header['DATE'] = str(datetime.datetime.now()).replace(' ','T')
+        self._header['ORIGIN'] = 'A. Kazemi-Moridani (combine_spatial)'
+        return self._header
+    
+    
+    def getPrimeHeader(self, nchan, ydim, xdim, mask = False, orig = 'prime_header'):
+        self._header['NAXIS1'] = int(xdim)
+        self._header['NAXIS2'] = int(ydim)
+        self._header['NAXIS3'] = int(nchan)
+        if mask:
+            self._header['BITPIX'] = 8
+            if orig == 'prime_header':
+                orig = 'mask_header'
+        if 'OBSERVER' in list(self._header.keys()):
+            self._header.remove('OBSERVER')
+        self._header['DATE'] = str(datetime.datetime.now()).replace(' ','T')
+        self._header['ORIGIN'] = f'A. Kazemi-Moridani ({orig})'
+        return self._header
+    
+    def spectralSplitHeader(self, nchan, sfreq = None, orig = 'spectral_split'):
+        self._header['NAXIS3'] = nchan
+        if sfreq != None:
+            self._header['CRVAL3'] = sfreq
+        if 'OBSERVER' in list(self._header.keys()):
+            self._header.remove('OBSERVER')
+        self._header['DATE'] = str(datetime.datetime.now()).replace(' ','T')
+        self._header['ORIGIN'] = f'A. Kazemi-Moridani ({orig})'
+        return self._header
+    
+    def spatialSplitHeader(self, xlims, ylims, chans = None):
+        xdn, xup = xlims
+        ydn, yup = ylims
+        freq = self.retFreq()
+        if chans != None:
+            chdn, chup = chans
+            self._header['NAXIS3'] = chup - chdn #make sure this is correct it was 'chup - chdn + 1' before
+            self._header['CRVAL3'] = freq[chdn]*1e6
+        xor = self._header['CRPIX1'] 
+        yor = self._header['CRPIX2'] 
+        self._header['CRPIX1'] = xor - xdn
+        self._header['CRPIX2'] = yor - ydn
+        self._header['NAXIS1'] = xup-xdn
+        self._header['NAXIS2'] = yup-ydn
+        if 'OBSERVER' in list(self._header.keys()):
+            self._header.remove('OBSERVER')
+        self._header['DATE'] = str(datetime.datetime.now()).replace(' ','T')
+        self._header['ORIGIN'] = 'A. Kazemi-Moridani (spatial_split)'
+        return self._header

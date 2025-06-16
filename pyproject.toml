@@ -6,6 +6,10 @@ authors = ["Amir Kazemi-Moridani, Sphesihle Makhathini, Mika Naidoo"]
 license = "MIT"
 readme = "README.md"
 
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
 [tool.poetry.dependencies]
 python = ">=3.10,<3.13"
 numpy = "^1.22.4"
@@ -15,12 +19,23 @@ xarray-fits = "*"
 zarr = "^2.18"
 stimela = {git = "https://github.com/caracal-pipeline/stimela.git", branch="master"}
 
+
 [tool.poetry.scripts]
 imcontsub = "contsub.parser.imcontsub:runit"
 
 [tool.poetry.group.dev.dependencies]
 jupyter = "*"
 
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[tool.poetry.group.tests]
+optional = true
+[tool.poetry.group.tests.dependencies]
+pytest = "^7.1.3"
+flake8 = "*"
+
+
+[tool.poetry.group.docs]
+optional = true
+[tool.poetry.group.docs.dependencies]
+Sphinx = "^5.3.0"
+sphinx-copybutton = "^0.5.0"
+furo = "^2022.9.15"
