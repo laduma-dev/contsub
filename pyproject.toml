@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "contsub"
-version = "0.1.2"
+version = "0.1.3"
 description = "Radio astronomy data continuum subtraction tools"
 authors = ["Amir Kazemi-Moridani, Sphesihle Makhathini, Mika Naidoo"]
 license = "MIT"
@@ -12,11 +12,11 @@ numpy = "^1.22.4"
 astropy = "^6.0.0"
 scipy = "^1.12.0"
 xarray-fits = "*"
+zarr = "^2.18"
 stimela = {git = "https://github.com/caracal-pipeline/stimela.git", branch="master"}
 
 [tool.poetry.scripts]
 imcontsub = "contsub.parser.imcontsub:runit"
-dimcontsub = "contsub.parser.dimcontsub:runit"
 
 [tool.poetry.group.dev.dependencies]
 jupyter = "*"
