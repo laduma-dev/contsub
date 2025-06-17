@@ -63,6 +63,10 @@ def runit(**kwargs):
     dims_string = "ra,dec,spectral"
     has_stokes = "stokes" in base_dims
     stokes_idx = opts.stokes_index
+    
+    log.info(f"Input data dimensions: {zds.DATA.dims}")
+    log.info(f"Input data shape: {zds.DATA.shape}")
+    
     if has_stokes:
         cube = zds.DATA[...,stokes_idx]
     else:
@@ -110,7 +114,7 @@ def runit(**kwargs):
                 mask_future = da.ones_like(dblock, dtype=bool)
             
             contfit = ContSub(fitfunc, nomask=False,
-                            reshape=False, fitsaxes=False,
+                            fitsaxes=False,
                             fit_tol=opts.cont_fit_tol)
             
             getfit = da.gufunc(
@@ -142,8 +146,8 @@ def runit(**kwargs):
     log.info("Writing outputs") 
     
     if has_stokes:
-        continuum = continuum[...,np.newaxis]
-        line = line[...,np.newaxis]
+        continuum = continuum[np.newaxis,...]
+        line = line[np.newaxis,...]
     
     log.info(f"Writing fitted continuum data to: {outcont}")
     fitsio.writeto(outcont, continuum, header, overwrite=opts.overwrite)

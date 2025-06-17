@@ -9,7 +9,7 @@ class ContSub():
     """
     a class for performing continuum subtraction on data
     """
-    def __init__(self, function, nomask, reshape=False, fitsaxes=True, fit_tol=0):
+    def __init__(self, function, nomask, fitsaxes=True, fit_tol=0):
         """
         each object can be initiliazed by passing a data cube, a fitting function, and a mask
         Args:
@@ -22,7 +22,6 @@ class ContSub():
         """
         self.nomask = nomask
         self.function = function
-        self.reshape = reshape
         self.fitsaxes = fitsaxes
         self.fit_tol = fit_tol
         
@@ -88,11 +87,6 @@ class ContSub():
                                                 weights = mask_ij)
         
         line = cube - contx
-        if self.reshape:
-            newshape = (2,1,0)
-            
-            contx = np.transpose(contx, newshape)
-            line = np.transpose(line, newshape) 
             
         if skipped_lines > 0:
             log.info(f"This worker set {skipped_lines} spectra to NaN because of --cont-fit-tol.")
