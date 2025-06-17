@@ -41,9 +41,10 @@ inputs:
     dtype: bool
     default: yes
   stokes-index:
-    info: "### NOT IMPLEMENTED. Stokes index 0 is assumed ### Index of stokes channel (zero-based) to use."
+    info: "Index of stokes channel (zero-based) to use."
     dtype: int
     default: 0
+    choices: [0,1,2,3]
   stokes-axis:
     info: "### DEPRECATED #### Set this flag if the input image has a stokes dimension. (Default is True)."
     default: yes
