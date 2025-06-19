@@ -129,7 +129,7 @@ def runit(**kwargs):
                 dblock,
                 mask_future,
             ))
-             
+            
         continuum = da.concatenate(futures).transpose((2,1,0))
     
     if has_stokes:

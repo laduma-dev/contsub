@@ -31,7 +31,7 @@ class ContSub():
         fits the data with the desired function and returns the continuum and the line
         
         Args:
-            xspec (Array): Apectrum coordinates_
+            xspec (Array): Spectrum coordinates_
             cube (Array): Data cube to subtract continuum from
             mask (Array): Binary data weights. True -> will be used in fir, False will not be used in fit.
 

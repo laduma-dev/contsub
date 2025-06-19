@@ -39,6 +39,7 @@ def get_automask(xspec, cube, sigma_clip=5, order=3, segments=400):
         
     mask = Mask(clip).getMask(cube - cont_model)
     log.info("Mask created sucessfully")
+    
     return mask
 
 
@@ -90,7 +91,17 @@ def zds_from_fits(fname, chunks=None):
     return ds.chunk(chunks)
 
 def subtract_fits(data_file: File, model_file: File, chunks: Dict):
-   
+    """ Returns the residual of two FITS files as a FitsPrimaryHDU object
+
+    Args:
+        data_file (File): FITS file of the data
+        model_file (File): FITS file of model data
+        chunks (Dict): How to chunk the data
+
+    Returns:
+        FitsPrimaryHDU
+    """
+    
     data_ds = xds_from_fits(data_file, chunks=chunks)[0]
     model_ds = xds_from_fits(model_file, chunks=chunks)[0]
     residual_ds = data_ds.hdu.data - model_ds.hdu.data
