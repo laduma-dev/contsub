@@ -5,9 +5,11 @@ from contsub.image_plane import ContSub
 from contsub.masking import PixSigmaClip, Mask
 from contsub.fitfuncs import FitBSpline
 from contsub import BIN
+from typing import Dict
 from scabha import init_logger
 import astropy.units as u
 import astropy.io.fits as fitsio
+from scabha.basetypes import File
 import numpy as np
 import datetime
 log = init_logger(BIN.im_plane)
@@ -31,10 +33,11 @@ def get_automask(xspec, cube, sigma_clip=5, order=3, segments=400):
     log.info("Creating binary mask as requested")
     fitfunc = FitBSpline(order, segments)
     contsub = ContSub(fitfunc, nomask=True, fitsaxes=False)
-    _, line = contsub.fitContinuum(xspec, cube, mask=None)
+    cont_model = contsub.fitContinuum(xspec, cube, mask=None)
+    
     clip = PixSigmaClip(sigma_clip)
         
-    mask = Mask(clip).getMask(line)
+    mask = Mask(clip).getMask(cube - cont_model)
     log.info("Mask created sucessfully")
     return mask
 
@@ -56,9 +59,10 @@ def zds_from_fits(fname, chunks=None):
     """
     chunks = chunks or dict(ra=64,dec=None, spectral=None)
     fds = xds_from_fits(fname)[0]
-    wcs = WCS(fds.hdu.header, naxis="spectral stokes".split())
-    with fitsio.open(fname) as hdul:
-        header = hdul[0].header
+    
+    header = fds.hdu.header
+    wcs = WCS(header, naxis="spectral stokes".split())
+    
 
     axis_names = [header["CTYPE1"], header["CTYPE2"]] + wcs.axis_type_names
     if not wcs.has_spectral:
@@ -79,16 +83,29 @@ def zds_from_fits(fname, chunks=None):
         coords = coords,
         attrs = dict(
             info =f"Temporary copy of data from FITS file: {fname}",
-            header = header,
+            header = fitsio.Header(header),
                     ),
     )
 
     return ds.chunk(chunks)
-#    return ds.to_zarr(store=f"{fname}.zarr", mode="w")
+
+def subtract_fits(data_file: File, model_file: File, chunks: Dict):
+   
+    data_ds = xds_from_fits(data_file, chunks=chunks)[0]
+    model_ds = xds_from_fits(model_file, chunks=chunks)[0]
+    residual_ds = data_ds.hdu.data - model_ds.hdu.data
+    
+    out_ds = data_ds.assign(hdu=(
+        data_ds.hdu.dims,
+        residual_ds, 
+        data_ds.hdu.attrs),
+    )
+    header = fitsio.Header(data_ds.hdu.header)
+    return fitsio.PrimaryHDU(out_ds.hdu.data, header=header)
 
 
 class FitsHeader():
-    def __init__(self, header):
+    def __init__(self, header: Dict):
         self._header = header.copy()
         
     def retFreq(self):

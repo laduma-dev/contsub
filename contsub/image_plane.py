@@ -44,8 +44,7 @@ class ContSub():
         else:
             dimx, dimy, nchan = cube.shape
             
-        contx = np.zeros_like(cube)
-        line = np.zeros_like(cube)
+        cont_model = np.zeros_like(cube)
         nomask = self.nomask
         if nomask:
             mask = None
@@ -68,7 +67,7 @@ class ContSub():
                 nanvals_idx = np.where(np.isnan(cube_ij))
                 nansize = len(nanvals_idx[0])
                 if nansize == nchan:
-                    contx[slc] = np.full_like(cube_ij, np.nan)
+                    cont_model[slc] = np.full_like(cube_ij, np.nan)
                     continue
                 elif nansize > 0:
                     if nomask:
@@ -80,16 +79,15 @@ class ContSub():
                     if isinstance(mask_ij, np.ndarray) and \
                             (nchan - mask_ij.sum()) / nchan > self.fit_tol/100:
                         skipped_lines += 1
-                        contx[slc] = np.full_like(cube_ij, np.nan)
+                        cont_model[slc] = np.full_like(cube_ij, np.nan)
                         continue
                 
-                contx[slc] = fitfunc.fit(xspec, cube_ij, 
+                cont_model[slc] = fitfunc.fit(xspec, cube_ij, 
                                                 weights = mask_ij)
         
-        line = cube - contx
             
         if skipped_lines > 0:
             log.info(f"This worker set {skipped_lines} spectra to NaN because of --cont-fit-tol.")
             
-        return contx, line
+        return cont_model
     
