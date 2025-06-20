@@ -10,7 +10,7 @@ from scabha import init_logger
 from contsub.image_plane import ContSub
 from contsub.fitfuncs import FitBSpline
 import astropy.io.fits as fitsio
-from contsub.utils import zds_from_fits, get_automask
+from contsub.utils import zds_from_fits, get_automask, subtract_fits
 import dask.array as da
 import time
 import numpy as np
@@ -91,8 +91,8 @@ def runit(**kwargs):
         allow_rechunk=True,
     )
 
-    signature = f"(spectral),({dims_string}),({dims_string}) -> (spectral,dec,ra),(spectral,dec,ra)"
-    meta = np.ndarray((), cube.dtype), np.ndarray((), cube.dtype)
+    signature = f"(spectral),({dims_string}),({dims_string}) -> ({dims_string})"
+    meta = (np.ndarray((), cube.dtype),)
     xspec = zds.FREQS.data
     
     dask.config.set(scheduler='threads', num_workers = opts.nworkers)
@@ -129,30 +129,21 @@ def runit(**kwargs):
                 dblock,
                 mask_future,
             ))
-        
-        results = da.compute(futures)
-        
-        continuum = np.concatenate(
-            [ results[0][chunk_][0] for chunk_ in range(biter+1)],
-        ).transpose((2,1,0))
-        
-        
-        line = np.concatenate(
-            [ results[0][chunk_][1] for chunk_ in range(biter+1)],
-        ).transpose((2,1,0))
-        
-    header = zds.attrs["header"]
-    
-    log.info("Writing outputs") 
+            
+        continuum = da.concatenate(futures).transpose((2,1,0))
     
     if has_stokes:
         continuum = continuum[np.newaxis,...]
-        line = line[np.newaxis,...]
+        
+    header = zds.attrs["header"]
+    out_ds_cont = fitsio.PrimaryHDU(continuum, header=header)
     
-    log.info(f"Writing fitted continuum data to: {outcont}")
-    fitsio.writeto(outcont, continuum, header, overwrite=opts.overwrite)
+    out_ds_cont.writeto(outcont, overwrite=opts.overwrite)
+    log.info(f"Continuum model cube written to: {outcont}")
+    
+    out_ds_line = subtract_fits(infits, outcont, chunks={0: opts.ra_chunks, 1:None, 2:None})
     log.info(f"Writing residual data (line cube) to: {outline}")
-    fitsio.writeto(outline, line, header, overwrite=opts.overwrite)
+    out_ds_line.writeto(outline, overwrite=opts.overwrite)
 
     # DONE
     dtime = time.time() - start_time
