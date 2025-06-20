@@ -9,20 +9,21 @@ class ContSub():
     """
     a class for performing continuum subtraction on data
     """
-    def __init__(self, function, nomask, fitsaxes=True, fit_tol=0):
+    def __init__(self, fit_func, nomask, fit_tol=0):
         """
         each object can be initiliazed by passing a data cube, a fitting function, and a mask
         Args:
-            function (Callable) : a fitting function should be built on FitFunc class
+            fit_func (Callable) : a fitting function should be built on FitFunc class
             nomask (bool): Ignore mask if set
-            fitsaxis (fits): Is the data in the standard FITS convention (y,x,spectral)?
-            reshape (bool): Reshape output to FITS convention before exit.
+            fit_tol (float): If set, will skip lines with more than this percentage of masked pixels.
+                             Default is 0, which means no skipping.
+                             If set to 100, will skip all lines with any masked pixels.
+                             If set to 0, will not skip any lines.
         Returns:
             None
         """
         self.nomask = nomask
-        self.function = function
-        self.fitsaxes = fitsaxes
+        self.fit_func = fit_func
         self.fit_tol = fit_tol
         
         
@@ -31,7 +32,7 @@ class ContSub():
         fits the data with the desired function and returns the continuum and the line
         
         Args:
-            xspec (Array): Spectrum coordinates_
+            xspec (Array): Spectrum coordinates
             cube (Array): Data cube to subtract continuum from
             mask (Array): Binary data weights. True -> will be used in fir, False will not be used in fit.
 
@@ -39,27 +40,22 @@ class ContSub():
             (Array,Array): Continuum fit and residual
         """
         
-        if self.fitsaxes: 
-            nchan, dimy, dimx = cube.shape
-        else:
-            dimx, dimy, nchan = cube.shape
+        dimx, dimy, nchan = cube.shape
             
         cont_model = np.zeros_like(cube)
         nomask = self.nomask
         if nomask:
             mask = None
             
-        fitfunc = self.function
+        fitfunc = self.fit_func
         if not fitfunc.preped:
             fitfunc.prepare(xspec)
 
         skipped_lines = 0 
         for ra in range(dimx):
             for dec in range(dimy):
-                if self.fitsaxes:
-                    slc = slice(None),dec,ra
-                else:
-                    slc = ra,dec,slice(None)
+                # slice the data cube for the current pixel
+                slc = ra,dec,slice(None)
                 mask_ij = mask[slc] if nomask == False else None
                 cube_ij = cube[slc]
                 
