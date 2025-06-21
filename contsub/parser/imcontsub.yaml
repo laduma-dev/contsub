@@ -59,7 +59,7 @@ inputs:
     default: 4
   loglevel:
     info: Log level for the output
-    dtype: int
+    dtype: str
     default: info
     choices:
       - info
