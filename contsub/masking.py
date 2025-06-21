@@ -4,6 +4,7 @@ from scipy import ndimage
 from scabha import init_logger
 from abc import ABC, abstractmethod
 from contsub import BIN
+import warnings
 
 log = init_logger(BIN.im_plane)
 
@@ -67,7 +68,9 @@ class PixSigmaClip(ClipMethod):
         calculate a mask from the given data 
         """
         sm_data = self.__smooth(data)
-        sigma = self.function(sm_data)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning) 
+            sigma = self.function(sm_data)[...,np.newaxis]
         mask = np.abs(sm_data) < self.n*sigma
         
         struct_dil = ndimage.generate_binary_structure(len(data.shape), 1)
@@ -91,10 +94,10 @@ class PixSigmaClip(ClipMethod):
             return sm_data
     
     def __rms(self):
-        return lambda x: np.sqrt(np.nanmean(np.square(x), axis = (0)))
+        return lambda x: np.sqrt(np.nanmean(np.square(x), axis = 2))
     
     def __mad(self):
-        return lambda x: np.nanmedian(np.abs(np.nanmean(x)-x), axis = (0))
+        return lambda x: np.nanmedian(np.abs(np.nanmean(x)-x), axis = 2)
         
 class ChanSigmaClip(ClipMethod):
     """
@@ -121,7 +124,7 @@ class ChanSigmaClip(ClipMethod):
         return np.abs(data) < self.n*sigma
     
     def __rms(self):
-        return lambda x: np.sqrt(np.nanmean(np.square(x), axis = (1,2)))
+        return lambda x: np.sqrt(np.nanmean(np.square(x), axis = (0,1)))
     
     def __mad(self):
-        return lambda x: np.nanmedian(np.abs(np.nanmean(x)-x), axis = (1,2))
+        return lambda x: np.nanmedian(np.abs(np.nanmean(x)-x), axis = (0,1))
