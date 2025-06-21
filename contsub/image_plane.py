@@ -37,7 +37,7 @@ class ContSub():
             mask (Array): Binary data weights. True -> will be used in fir, False will not be used in fit.
 
         Returns:
-            (Array,Array): Continuum fit and residual
+            Array: Continuum fit
         """
         
         dimx, dimy, nchan = cube.shape
@@ -81,7 +81,6 @@ class ContSub():
                 cont_model[slc] = fitfunc.fit(xspec, cube_ij, 
                                                 weights = mask_ij)
         
-            
         if skipped_lines > 0:
             log.info(f"This worker set {skipped_lines} spectra to NaN because of --cont-fit-tol.")
             
