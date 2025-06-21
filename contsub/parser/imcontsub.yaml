@@ -57,6 +57,16 @@ inputs:
     info: Number of workers (one per CPU)
     dtype: int
     default: 4
+  loglevel:
+    info: Log level for the output
+    dtype: str
+    default: info
+    choices:
+      - info
+      - debug
+      - trace
+      - error
+      - critical
   _use:
   - libs.spline.inputs
 outputs:

@@ -16,7 +16,6 @@ import time
 import numpy as np
 import dask.multiprocessing
 
-log = init_logger(BIN.im_plane)
 
 command = BIN.im_plane
 thisdir  = os.path.dirname(__file__)
@@ -25,6 +24,7 @@ sources = [File(item) for item in source_files]
 parserfile = File(f"{thisdir}/{command}.yaml")
 config = paramfile_loader(parserfile, sources)[command]
 
+log = init_logger(BIN.im_plane)
 
 @click.command("imcontsub")
 @click.version_option(str(contsub.__version__))
@@ -33,6 +33,7 @@ def runit(**kwargs):
     start_time = time.time()
     
     opts = OmegaConf.create(kwargs)
+    
     if opts.cont_fit_tol > 100:
         log.warning("Requested --cont-fit-tol is larger than 100 percent. Assuming it is 100.")
         opts.cont_fit_tol = 100
@@ -72,17 +73,27 @@ def runit(**kwargs):
     else:
         cube = zds.DATA
     
-    niter = 1
+    if len(opts.order) != len(opts.segments):
+        raise ValueError("If setting multiple --order and --segments, they must be of equal length. "
+                         f"Got {len(opts.order)} orders and {len(opts.segments)} segments.")
+    niter = len(opts.order)
+    
     nomask = True
     automask = False 
     if getattr(opts, "mask_image", None):
         mask = zds_from_fits(opts.mask_image, chunks=chunks).DATA
         nomask = False
+    
     if getattr(opts, "sigma_clip", None):
         automask = True
         sigma_clip = list(opts.sigma_clip)
     else:
-        sigma_clip = None
+        sigma_clip = []
+    
+    if len(sigma_clip) < niter and automask:
+        log.warning(f"Only {len(sigma_clip)} sigma-clips provided, but {niter} iterations requested."
+                    " Using last value for unspecified iterations.")
+        sigma_clip.extend([sigma_clip[-1]] * (niter - len(sigma_clip)))
     
     get_mask = da.gufunc(
         get_automask,
@@ -96,15 +107,16 @@ def runit(**kwargs):
     xspec = zds.FREQS.data
     
     dask.config.set(scheduler='threads', num_workers = opts.nworkers)
+    dblocks = cube.data.blocks
     for iter_i in range(niter):
+        log.info(f"Loading delayed compute for iteration {iter_i+1}/{niter} of continuum modelling.")
         futures = []
         fitfunc = FitBSpline(opts.order[iter_i], opts.segments[iter_i])
-        for biter,dblock in enumerate(cube.data.blocks):
-            if nomask and automask:
-                sclip = sigma_clip[0]
+        for biter,dblock in enumerate(dblocks):
+            if (nomask and automask) or (iter_i > 0 and automask):
                 mask_future = get_mask(xspec,
                                     dblock,
-                                    sclip, 
+                                    sigma_clip[iter_i], 
                                     opts.order[iter_i],
                                     opts.segments[iter_i],
                 )
@@ -114,7 +126,6 @@ def runit(**kwargs):
                 mask_future = da.ones_like(dblock, dtype=bool)
             
             contfit = ContSub(fitfunc, nomask=False,
-                            fitsaxes=False,
                             fit_tol=opts.cont_fit_tol)
             
             getfit = da.gufunc(
@@ -130,8 +141,9 @@ def runit(**kwargs):
                 mask_future,
             ))
             
-        continuum = da.concatenate(futures).transpose((2,1,0))
+        dblocks = list(futures)
     
+    continuum = da.concatenate(futures).transpose((2,1,0))
     if has_stokes:
         continuum = continuum[np.newaxis,...]
         

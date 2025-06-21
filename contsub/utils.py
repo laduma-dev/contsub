@@ -32,7 +32,7 @@ def get_automask(xspec, cube, sigma_clip=5, order=3, segments=400):
 
     log.info("Creating binary mask as requested")
     fitfunc = FitBSpline(order, segments)
-    contsub = ContSub(fitfunc, nomask=True, fitsaxes=False)
+    contsub = ContSub(fitfunc, nomask=True, fit_tol=60)
     cont_model = contsub.fitContinuum(xspec, cube, mask=None)
     
     clip = PixSigmaClip(sigma_clip)
