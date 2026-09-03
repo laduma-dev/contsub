@@ -1292,7 +1292,7 @@ wheels = [
 
 [[package]]
 name = "stimela-ninja"
-version = "0.1.0b5"
+version = "0.1.0b6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
@@ -1302,9 +1302,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "rich" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/09/e1/e02e6e9b5970dafab512309e11d0223828da0cb7b603c430c601b73a8e8b/stimela_ninja-0.1.0b5.tar.gz", hash = "sha256:6c24183ede38cca2ab12c086d8bef597d46af68c30b12c3f4f9de2c4594f8928", size = 235467, upload-time = "2026-07-31T21:34:20.009Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b6/16/80ad0b051ed2027002e26db84f6fbb661b8c285e198aec8d3d1794495bec/stimela_ninja-0.1.0b6.tar.gz", hash = "sha256:8795a958cd5502d8e797cd541982fe77192e223471fe94dfa0b172f6fa8bbbc1", size = 303768, upload-time = "2026-08-28T07:24:05.028Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/46/92/ded4620cfb1498892efdfdb0c0710d0c9aba3694b7762e425e50acd42dda/stimela_ninja-0.1.0b5-py3-none-any.whl", hash = "sha256:50a98053ec4aedf1b916fb7ff1c63c972e0e793396c6e9fba359f3d816042bc6", size = 231917, upload-time = "2026-07-31T21:34:18.61Z" },
+    { url = "https://files.pythonhosted.org/packages/ce/50/c60f330960bb9d5e6882dad9bf0306ec6880f64154eb9dfb5eef95f59168/stimela_ninja-0.1.0b6-py3-none-any.whl", hash = "sha256:22f46a9b7cb7be5db78e564a805cd1aac5288015ee441eb71b4d3a98b1c05944", size = 301170, upload-time = "2026-08-28T07:24:03.731Z" },
 ]
 
 [[package]]
