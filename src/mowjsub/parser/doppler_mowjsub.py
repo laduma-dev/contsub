@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 from pathlib import Path
 from types import SimpleNamespace
@@ -12,7 +13,7 @@ from daskms import xds_from_ms, xds_to_table
 from pydantic import Field
 from tqdm.dask import TqdmCallback
 
-from mowjsub import BIN, set_logger
+from mowjsub import BIN, LOGGER
 from mowjsub.parser._cli import make_command
 from mowjsub.utils import (
     doppler_regrid_dataset,
@@ -38,7 +39,7 @@ def runit(opts):
     """
     start_time = time.time()
 
-    log = set_logger()
+    log = logging.getLogger(LOGGER)
     ms = opts.ms
     spwid = opts.spwid
     fieldid = opts.field_id
