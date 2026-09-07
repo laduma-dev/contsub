@@ -9,10 +9,18 @@ turn follows simms 3.0.
 Unlike fitstoolz, mowjsub's commands are standalone console scripts rather than
 subcommands of one group, so there is no root group to take ``--version`` or the
 log level from; both belong to the command itself.
+
+This module is also mowjsub's *application* layer, and so the one place that
+configures logging. The package itself only ever calls ``logging.getLogger``
+(see `mowjsub._package`), the same library/application split shinobi keeps --
+``shinobi.logsetup`` attaches shinobi's file handler from the CLI and nothing
+in the package touches a handler. ``set_logger`` used to live in mowjsub's
+package initializer and did both jobs at once.
 """
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -21,6 +29,42 @@ from shinobi.clickutil import build_options, unflatten_kwargs
 from shinobi.steps.dispatch import _dispatch
 
 import mowjsub
+from mowjsub import LOGGER
+
+#: What ``--loglevel`` accepts. 'trace' is not a Python level; it is kept
+#: because the option has always offered it, and maps to DEBUG.
+LOG_LEVELS = {
+    "info": logging.INFO,
+    "debug": logging.DEBUG,
+    "trace": logging.DEBUG,
+    "error": logging.ERROR,
+    "critical": logging.CRITICAL,
+}
+
+
+def configure_logging(level: str | int = "info") -> None:
+    """Attach mowjsub's console handler, at `level`.
+
+    Called once per command invocation, from the callback below, so a
+    command that offers no ``--loglevel`` (``vis-mowjsub``,
+    ``doppler-mowjsub``) is still audible at INFO -- which is what
+    ``set_logger()`` with no argument used to do for them.
+
+    Args:
+        level: A name from :data:`LOG_LEVELS`, or a logging level.
+    """
+    if isinstance(level, str):
+        level = LOG_LEVELS.get(level.lower(), logging.INFO)
+
+    logger = logging.getLogger(LOGGER)
+    logger.setLevel(level)
+
+    if not any(not isinstance(handler, logging.NullHandler) for handler in logger.handlers):
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(asctime)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
+        logger.addHandler(handler)
+    for handler in logger.handlers:
+        handler.setLevel(level)
 
 
 def _show_version(ctx, param, value):
@@ -88,6 +132,8 @@ def make_command(step, *, positional: str | None = None, must_exist: Iterable[st
             params.append(option)
 
     def _callback(**raw):
+        # Before dispatch, so anything the step logs on its way in is carried.
+        configure_logging(raw.get("loglevel", "info"))
         kwargs = unflatten_kwargs(model, raw)
         result = _dispatch(step.step, step.func, **kwargs)
         if not result.success:

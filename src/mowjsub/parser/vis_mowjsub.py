@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 from functools import partial
 from pathlib import Path
@@ -15,7 +16,7 @@ from daskms import xds_from_ms, xds_to_table
 from pydantic import Field
 from tqdm.dask import TqdmCallback
 
-from mowjsub import BIN, set_logger
+from mowjsub import BIN, LOGGER
 from mowjsub.fitfuncs import (
     ORDER_MODELS,
     WIDTH_MODELS,
@@ -48,7 +49,7 @@ def _contsub_block(vis, flags, weights, spec, seed):
 def runit(opts):
     start_time = time.time()
 
-    log = set_logger()
+    log = logging.getLogger(LOGGER)
     ms = opts.ms
     spwid = opts.spwid
     fieldid = opts.field_id

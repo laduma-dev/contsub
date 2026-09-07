@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 from functools import partial
 from pathlib import Path
@@ -13,7 +14,7 @@ import shinobi
 import xarray as xr
 from pydantic import Field
 
-from mowjsub import BIN, set_logger
+from mowjsub import BIN, LOGGER
 from mowjsub.fitfuncs import (
     ORDER_MODELS,
     WIDTH_MODELS,
@@ -50,7 +51,7 @@ def _fit_block(data, mask, spec, seed):
 def runit(opts):
     start_time = time.time()
 
-    log = set_logger(opts.loglevel)
+    log = logging.getLogger(LOGGER)
 
     if opts.cont_fit_tol > 100:
         log.warning("Requested --cont-fit-tol is larger than 100 percent. Assuming it is 100.")
